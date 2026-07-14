@@ -27,11 +27,17 @@ export const config = {
   growApiBase: '',
   // Make (make.com) webhook that creates a Grow payment link and sends it to the
   // customer by SMS/email (per the Grow+Make guide). Highest precedence when set.
-  growMakeWebhook: 'https://hook.eu1.make.com/agat3ar8ld67bvlf4tpcysok57aii6pk',
+  growMakeWebhook: '',
   growLinks: {
-    small: '',   // e.g. 'https://pay.grow.link/...'
-    full: '',
-    legacy: ''
+    // Fixed Grow payment pages, one per package. To verify payment automatically,
+    // set each page's "עמוד תודה → קישור לעמוד תודה באתר שלך" (thank-you return URL)
+    // in the Grow dashboard to your site + ?paid=1, e.g.:
+    //   https://glittery-hamster-8da1b1.netlify.app/?paid=1
+    // After a successful charge Grow returns the customer here, the payment tab
+    // signals the original tab, and the photos upload automatically.
+    small: 'https://pay.grow.link/df2ca38c2edd70b1b6cbe46f22251557-MjI4Mzk0MA',
+    full: 'https://pay.grow.link/df2ca38c2edd70b1b6cbe46f22251557-MjI4Mzk0MA',
+    legacy: 'https://pay.grow.link/df2ca38c2edd70b1b6cbe46f22251557-MjI4Mzk0MA'
   },
 
   // Coupon codes — code (uppercase) -> discount.
@@ -59,14 +65,15 @@ export const config = {
 
   defaultPackageKey: 'full',
 
-  // Filmstrip examples (photo url + title). Replace with your real thumbnails.
+  // Filmstrip examples (photo url + title + optional video). Clicking a tile opens a
+  // lightbox that plays `video` if set; otherwise shows a "coming soon" placeholder.
   examples: [
-    { img: 'https://picsum.photos/seed/noa-baby/440/280',    title: 'השנה הראשונה של נועה' },
-    { img: 'https://picsum.photos/seed/saba-savta/440/280',  title: '40 שנה לסבא וסבתא' },
-    { img: 'https://picsum.photos/seed/yam-trip/440/280',    title: 'הטיול המשפחתי לים' },
-    { img: 'https://picsum.photos/seed/birthday/440/280',    title: 'השנה הראשונה של נועה' },
-    { img: 'https://picsum.photos/seed/family-home/440/280', title: '40 שנה לסבא וסבתא' },
-    { img: 'https://picsum.photos/seed/picnic/440/280',      title: 'הטיול המשפחתי לים' }
+    { img: 'https://picsum.photos/seed/noa-baby/440/280',    title: 'השנה הראשונה של נועה', video: '' },
+    { img: 'https://picsum.photos/seed/saba-savta/440/280',  title: '40 שנה לסבא וסבתא', video: '' },
+    { img: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',    title: 'הטיול המשפחתי לים', video: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ' },
+    { img: 'https://picsum.photos/seed/birthday/440/280',    title: 'השנה הראשונה של נועה', video: '' },
+    { img: 'https://picsum.photos/seed/family-home/440/280', title: '40 שנה לסבא וסבתא', video: '' },
+    { img: 'https://picsum.photos/seed/picnic/440/280',      title: 'הטיול המשפחתי לים', video: '' }
   ],
 
   contactEmail: 'animoments@gmail.com'

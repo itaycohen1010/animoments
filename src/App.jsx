@@ -257,6 +257,31 @@ export default function App() {
     startUpload();
   };
 
+  // Grow payment return: this tab may be Grow's thank-you redirect (?paid=1),
+  // or the original tab receiving the "paid" signal from the payment tab.
+  // localStorage is shared across same-origin tabs even when window.opener is lost.
+  const startUploadRef = useRef(null);
+  startUploadRef.current = startUpload;
+  const stepRef = useRef(0);
+  stepRef.current = step;
+  const resultRef = useRef(result);
+  resultRef.current = result;
+  useEffect(() => {
+    const goPaid = () => { if (stepRef.current === 3 && resultRef.current !== 'done') startUploadRef.current && startUploadRef.current(); };
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('paid') === '1') {
+      try { localStorage.setItem('zkm_grow_paid', String(Date.now())); } catch (e) {}
+      if (window.opener && !window.opener.closed) { try { window.opener.postMessage({ grow: 'paid' }, '*'); } catch (e) {} }
+      setTimeout(() => { try { window.close(); } catch (e) {} }, 400);
+      return;
+    }
+    const onMsg = (e) => { if (e && e.data && e.data.grow === 'paid') goPaid(); };
+    const onStorage = (e) => { if (e.key === 'zkm_grow_paid' && e.newValue) goPaid(); };
+    window.addEventListener('message', onMsg);
+    window.addEventListener('storage', onStorage);
+    return () => { window.removeEventListener('message', onMsg); window.removeEventListener('storage', onStorage); };
+  }, []);
+
   const resetAll = () => {
     uploadFolderRef.current = null;
     detailsUploadedRef.current = false;

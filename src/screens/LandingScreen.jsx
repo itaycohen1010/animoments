@@ -1,9 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { config, colors as C } from '../config.js';
 import { pillBtn, smallGhostBtn } from '../styles.js';
 
 // Screen 0 — landing page: hero, dictionary word, filmstrip, how-it-works, pricing, closing CTA.
 export default function LandingScreen({ onStart, onOpenHow }) {
+  const [lightbox, setLightbox] = useState(null); // { title, video }
+
+  // Build the right player for a URL: YouTube/Vimeo → iframe embed, else <video>.
+  const playerEl = (url) => {
+    const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+    if (yt) return <iframe src={`https://www.youtube.com/embed/${yt[1]}?autoplay=1&rel=0`} title="סרטון דוגמה" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen style={{ width: '100%', height: '100%', border: 'none', background: '#000' }} />;
+    const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if (vm) return <iframe src={`https://player.vimeo.com/video/${vm[1]}?autoplay=1`} title="סרטון דוגמה" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen style={{ width: '100%', height: '100%', border: 'none', background: '#000' }} />;
+    return <video src={url} controls autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }} />;
+  };
+
   return (
     <div data-screen-label="Landing">
       <div style={{ position: 'relative', overflow: 'hidden', background: `radial-gradient(900px 480px at 50% -120px, #FFE3C4, transparent), ${C.cream}` }}>
@@ -44,7 +55,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
             {[0, 1].map((half) => (
               <div key={half} style={{ display: 'flex', gap: 10, padding: '8px 5px' }}>
                 {config.examples.map((ex, i) => (
-                  <a key={i} style={{ position: 'relative', width: 220, height: 140, borderRadius: 6, overflow: 'hidden', background: '#4a352a', display: 'block' }}>
+                  <a key={i} onClick={() => setLightbox({ title: ex.title, video: (ex.video || '').trim() })} style={{ position: 'relative', width: 220, height: 140, borderRadius: 6, overflow: 'hidden', background: '#4a352a', display: 'block', cursor: 'pointer' }}>
                     <img src={ex.img} alt={`קטע מסרטון: ${ex.title}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'sepia(.22) saturate(1.12) brightness(.97)' }} />
                     <span aria-hidden="true" style={{ position: 'absolute', inset: 0, margin: 'auto', width: 42, height: 42, borderRadius: '50%', background: 'rgba(255,255,255,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.accent, fontSize: 15, boxShadow: '0 6px 16px rgba(59,42,32,.25)' }}>▶</span>
                     <span style={{ position: 'absolute', bottom: 0, right: 0, left: 0, direction: 'rtl', background: 'linear-gradient(to top, rgba(46,31,23,.85), transparent)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '18px 12px 8px', textAlign: 'right' }}>{ex.title}</span>
@@ -120,6 +131,27 @@ export default function LandingScreen({ onStart, onOpenHow }) {
         <p style={{ color: '#FFE9D6', fontSize: '1.1rem', margin: '0 0 34px' }}>כל התהליך לוקח כחמש דקות.</p>
         <button onClick={() => onStart()} style={{ border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 18, color: C.accent, background: '#fff', padding: '17px 46px', borderRadius: 999, boxShadow: '0 12px 30px rgba(59,42,32,.3)' }}>העלאת תמונות</button>
       </div>
+
+      {/* example-video lightbox */}
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(30,20,14,.82)', backdropFilter: 'blur(6px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={lightbox.title} style={{ position: 'relative', width: '100%', maxWidth: 460 }}>
+            <button onClick={() => setLightbox(null)} aria-label="סגירה" style={{ position: 'absolute', top: -46, left: 0, border: 'none', background: 'rgba(255,255,255,.14)', cursor: 'pointer', width: 38, height: 38, borderRadius: '50%', color: '#fff', fontSize: 20, lineHeight: 1 }}>×</button>
+            <div style={{ borderRadius: 14, overflow: 'hidden', background: '#000', boxShadow: '0 30px 70px rgba(0,0,0,.5)', aspectRatio: '16 / 9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {lightbox.video ? (
+                playerEl(lightbox.video)
+              ) : (
+                <div style={{ textAlign: 'center', color: '#F4E7DA', direction: 'rtl', padding: 30 }}>
+                  <div style={{ fontSize: 46, marginBottom: 12 }}>🎬</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.15rem', marginBottom: 6 }}>{lightbox.title}</div>
+                  <div style={{ color: '#C9B4A3', fontSize: '.95rem' }}>הסרטון לדוגמה יתווסף כאן בקרוב.</div>
+                </div>
+              )}
+            </div>
+            <div style={{ direction: 'rtl', textAlign: 'center', color: '#fff', fontWeight: 700, fontSize: '1.02rem', marginTop: 14 }}>{lightbox.title}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -185,21 +185,19 @@ export default function PaymentScreen({ pkg, photoCount, form, card, setCard, pa
           </>
         ) : growLink ? (
           <>
-            <p style={{ color: C.body, fontSize: '.93rem', lineHeight: 1.7, margin: '0 0 16px' }}>התשלום מתבצע בדף מאובטח של Grow. לאחר סיום התשלום חזרו לכאן ולחצו על הכפתור השני.</p>
-            <button onClick={() => { window.open(growLink, '_blank', 'noopener'); setGrowOpened(true); }}
+            <p style={{ color: C.body, fontSize: '.93rem', lineHeight: 1.7, margin: '0 0 16px' }}>התשלום מתבצע בדף מאובטח של Grow. לאחר תשלום מוצלח נחזיר אתכם לכאן אוטומטית והתמונות יישלחו — אין צורך ללחוץ על דבר.</p>
+            <button onClick={() => { window.open(growLink, 'growpay'); setGrowOpened(true); }}
               style={{ ...pillBtn, width: '100%', padding: '15px 20px' }}>מעבר לתשלום ₪{payPrice} ב-Grow</button>
-            <button onClick={() => { if (growOpened) onConfirm(); }} disabled={!growOpened}
-              style={{
-                border: growOpened ? 'none' : `1.5px solid ${C.borderStrong}`,
-                cursor: growOpened ? 'pointer' : 'not-allowed',
-                width: '100%', marginTop: 12, fontWeight: 800, fontSize: 16,
-                color: growOpened ? '#fff' : '#B59C88',
-                background: growOpened ? 'linear-gradient(135deg, #2A8A5B, #35A66E)' : '#F6EDE4',
-                padding: '15px 20px', borderRadius: 999,
-                boxShadow: growOpened ? '0 8px 20px rgba(42,138,91,.3)' : 'none',
-                transition: 'all .2s ease'
-              }}>שילמתי — שליחת התמונות</button>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, color: C.muted, fontSize: '.82rem' }}>🔒 תשלום מאובטח באמצעות Grow (משולם)</div>
+            {growOpened && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 16 }}>
+                  <div style={{ width: 18, height: 18, border: '3px solid #F0D9C4', borderTopColor: C.accent, borderRadius: '50%', animation: 'spin .9s linear infinite' }} />
+                  <span style={{ color: C.body, fontSize: '.92rem', fontWeight: 700 }}>ממתינים לאישור התשלום מ-Grow…</span>
+                </div>
+                <div style={{ textAlign: 'center', color: C.muted, fontSize: '.82rem', marginTop: 8 }}>התמונות יישלחו אוטומטית ברגע שהתשלום יאושר. אל תסגרו את הדף.</div>
+              </>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 14, color: C.muted, fontSize: '.82rem' }}>🔒 תשלום מאובטח באמצעות Grow (משולם)</div>
           </>
         ) : (
           <>
