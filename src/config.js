@@ -5,6 +5,15 @@
 export const config = {
   brandName: 'זִכְרוֹנִימַצְיָה',
 
+  // Optional promo banner shown under the hero title (e.g. coupon announcement).
+  // Leave empty ('') to hide it.
+  announcement: 'WELCOME20 - קוד קופון חדש! 20% הנחה על כל החבילות',
+
+  // Optional promo/coupon popup shown once when the page opens. Empty ('') = no popup.
+  promoPopup: '',
+  promoTextSize: 24, // popup text size in px (adjust to taste)
+  promoImage: '', // optional image URL shown in the popup instead of text
+
   // Cloudinary (unsigned upload). Leave empty for demo mode (no real upload).
   cloudinary: {
     cloudName: 'dmxkoz4jo',
@@ -35,9 +44,9 @@ export const config = {
     //   https://glittery-hamster-8da1b1.netlify.app/?paid=1
     // After a successful charge Grow returns the customer here, the payment tab
     // signals the original tab, and the photos upload automatically.
-    small: 'https://pay.grow.link/df2ca38c2edd70b1b6cbe46f22251557-MjI4Mzk0MA',
-    full: 'https://pay.grow.link/df2ca38c2edd70b1b6cbe46f22251557-MjI4Mzk0MA',
-    legacy: 'https://pay.grow.link/df2ca38c2edd70b1b6cbe46f22251557-MjI4Mzk0MA'
+    small: 'https://pay.grow.link/ODkyNTA~2844b6317cda0e9071e47fc4916ae680-MzY5MjczOA',
+    full: 'https://pay.grow.link/ODkyNTA~8b612eff645c45af508907ff1006cab5-MzY5MzYyNw',
+    legacy: 'https://pay.grow.link/ODkyNTA~e1af196c93592db1809d2a3d76bc6e7d-MzY5MzY0NQ'
   },
 
   // Coupon codes — code (uppercase) -> discount.
@@ -70,7 +79,7 @@ export const config = {
   examples: [
     { img: 'https://picsum.photos/seed/noa-baby/440/280',    title: 'השנה הראשונה של נועה', video: '' },
     { img: 'https://picsum.photos/seed/saba-savta/440/280',  title: '40 שנה לסבא וסבתא', video: '' },
-    { img: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',    title: 'הטיול המשפחתי לים', video: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ' },
+    { img: 'https://picsum.photos/seed/yam-trip/440/280',    title: 'הטיול המשפחתי לים', video: '' },
     { img: 'https://picsum.photos/seed/birthday/440/280',    title: 'השנה הראשונה של נועה', video: '' },
     { img: 'https://picsum.photos/seed/family-home/440/280', title: '40 שנה לסבא וסבתא', video: '' },
     { img: 'https://picsum.photos/seed/picnic/440/280',      title: 'הטיול המשפחתי לים', video: '' }

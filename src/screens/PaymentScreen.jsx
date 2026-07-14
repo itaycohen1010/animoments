@@ -239,7 +239,7 @@ export default function PaymentScreen({ pkg, photoCount, form, card, setCard, pa
           </>
         )}
         <div style={{ marginTop: 18, textAlign: 'center' }}>
-          <button onClick={onBack} style={{ ...ghostBtn, background: '#fff', padding: '11px 28px' }}>חזרה לתמונות</button>
+          <button onClick={onBack} style={{ ...ghostBtn, background: '#fff', padding: '11px 28px' }}>חזרה לפרטים</button>
         </div>
       </div>
     </div>

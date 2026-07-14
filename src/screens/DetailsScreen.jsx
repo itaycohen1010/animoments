@@ -20,8 +20,8 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
       <div className="card-pad" style={{ background: '#fff', borderRadius: 24, padding: '34px 30px', boxShadow: '0 14px 40px rgba(180,100,70,.16)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <h2 style={{ fontWeight: 800, fontSize: '1.6rem', margin: '0 0 6px' }}>נתחיל בפרטים שלכם</h2>
-            <p style={{ color: C.body, fontSize: '.98rem', lineHeight: 1.7, margin: '0 0 20px' }}>כמה פרטים בסיסיים — ומיד עוברים לבחירת התמונות.</p>
+            <h2 style={{ fontWeight: 800, fontSize: '1.6rem', margin: '0 0 6px' }}>רק עוד כמה פרטים</h2>
+            <p style={{ color: C.body, fontSize: '.98rem', lineHeight: 1.7, margin: '0 0 20px' }}>פרטים ליצירת קשר — ומיד עוברים לתשלום וסיום ההזמנה.</p>
           </div>
           <button onClick={() => onOpenHow(1)} style={{ ...smallGhostBtn, fontSize: 13, padding: '8px 14px' }}>איך זה עובד? 👀</button>
         </div>
@@ -42,7 +42,7 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
 
         <div className="actions-row" style={{ display: 'flex', gap: 12, justifyContent: 'space-between', marginTop: 26, flexWrap: 'wrap' }}>
           <button onClick={onBack} style={ghostBtn}>חזרה</button>
-          <button onClick={onContinue} style={pillBtn}>המשך לבחירת תמונות</button>
+          <button onClick={onContinue} style={pillBtn}>המשך לתשלום</button>
         </div>
       </div>
     </div>

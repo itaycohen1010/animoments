@@ -25,10 +25,7 @@ function doPost(e) {
    '<div style="max-width:620px;margin:0 auto;background:#FAF0E6;border-radius:8px;overflow:hidden">' +
     '<div style="background:#2E1F17;padding:26px 20px;text-align:center">' +
      '<div style="margin-bottom:14px">' +
-      '<span style="display:inline-block;width:34px;height:24px;background:#4a352a;border-radius:3px;margin:0 3px"></span>' +
-      '<span style="display:inline-block;width:34px;height:24px;background:#C4502E;border-radius:3px;margin:0 3px"></span>' +
-      '<span style="display:inline-block;width:34px;height:24px;background:#E8A13C;border-radius:3px;margin:0 3px"></span>' +
-      '<span style="display:inline-block;width:34px;height:24px;background:#4a352a;border-radius:3px;margin:0 3px"></span>' +
+      '<img src="https://glittery-hamster-8da1b1.netlify.app/logo-mark.png" alt="זכרונימציה" width="66" height="66" style="width:66px;height:66px;border-radius:14px" />' +
      '</div>' +
      '<div style="color:#E8A13C;font-weight:900;font-size:24px">זִכְרוֹנִימַצְיָה</div>' +
      '<div style="color:rgba(250,240,230,.7);font-size:13px;margin-top:4px">הזכרונות שלכם — לסרטון מרגש</div>' +

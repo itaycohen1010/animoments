@@ -39,6 +39,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);          // 'how' | 'tips' | 'confirm' | 'blessing' | 'privacy' | 'accessibility' | 'terms'
   const [howStep, setHowStep] = useState(1);
+  const [promoOpen, setPromoOpen] = useState(!!((config.promoPopup || '').trim() || (config.promoImage || '').trim()));
 
   const tipsShownRef = useRef(false);
   const fileInputRef = useRef(null);
@@ -145,16 +146,16 @@ export default function App() {
   // ---------- navigation ----------
   const startOrder = (key) => {
     if (key) setPkgKey(key);
-    setStep(1); // details first
+    const openTips = !tipsShownRef.current;
+    tipsShownRef.current = true;
+    setStep(1); // photos first
+    if (openTips) setModal('tips');
   };
 
   const detailsToPhotos = () => {
     const err = validateDetails();
     if (err) { setFormError(err); return; }
-    const openTips = !tipsShownRef.current;
-    tipsShownRef.current = true;
-    setStep(2);
-    if (openTips) setModal('tips');
+    setStep(3); // details → payment
   };
 
   const photosToPayment = () => {
@@ -293,7 +294,7 @@ export default function App() {
 
   // ---------- journey bar ----------
   const journeyPct = [10, 35, 60, 82, 100][step];
-  const journeyLabel = ['ברוכים הבאים', 'שלב 1 מתוך 4 — פרטים', 'שלב 2 מתוך 4 — בחירת תמונות', 'שלב 3 מתוך 4 — תשלום', 'שלב 4 מתוך 4 — סיום ✓'][step];
+  const journeyLabel = ['ברוכים הבאים', 'שלב 1 מתוך 4 — בחירת תמונות', 'שלב 2 מתוך 4 — פרטים', 'שלב 3 מתוך 4 — תשלום', 'שלב 4 מתוך 4 — סיום ✓'][step];
 
   // ===================================================================
   return (
@@ -301,23 +302,27 @@ export default function App() {
       <Nav step={step} journeyPct={journeyPct} journeyLabel={journeyLabel}
         onHome={() => setStep(0)} onStart={() => startOrder()} />
 
+      {(config.announcement || '').trim() && (
+        <div style={{ background: '#17120F', color: '#fff', textAlign: 'center', fontWeight: 800, fontSize: 15, padding: '11px 20px', direction: 'rtl' }}>{config.announcement}</div>
+      )}
+
       {step === 0 && <LandingScreen onStart={startOrder} onOpenHow={openHow} />}
 
       {step === 1 && (
-        <DetailsScreen pkg={pkg} form={form} reportPaidPrice={(v) => { paidPriceRef.current = v; }} setForm={setForm}
-          formError={formError} setFormError={setFormError}
-          onBack={() => setStep(0)} onContinue={detailsToPhotos} onOpenHow={openHow} />
-      )}
-
-      {step === 2 && (
         <UploadScreen pkg={pkg} pkgKey={pkgKey} setPkgKey={setPkgKey}
           photos={photos} setPhotos={setPhotos}
           dragIndex={dragIndex} setDragIndex={setDragIndex}
           dzOver={dzOver} setDzOver={setDzOver}
           addFiles={addFiles} reorder={reorder} touchDrag={touchDrag} fileInputRef={fileInputRef}
           showToast={showToast}
-          onBack={() => setStep(1)} onContinue={photosToPayment}
+          onBack={() => setStep(0)} onContinue={photosToPayment}
           onOpenTips={() => setModal('tips')} onOpenHow={openHow} />
+      )}
+
+      {step === 2 && (
+        <DetailsScreen pkg={pkg} form={form} reportPaidPrice={(v) => { paidPriceRef.current = v; }} setForm={setForm}
+          formError={formError} setFormError={setFormError}
+          onBack={() => setStep(1)} onContinue={detailsToPhotos} onOpenHow={openHow} />
       )}
 
       {step === 3 && (
@@ -340,6 +345,16 @@ export default function App() {
       )}
 
       {/* modals */}
+      {promoOpen && ((config.promoPopup || '').trim() || (config.promoImage || '').trim()) && (
+        <div onClick={() => setPromoOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(59,42,32,.55)', backdropFilter: 'blur(5px)', zIndex: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="מבצע" style={{ position: 'relative', background: '#fff', borderRadius: 24, maxWidth: 420, width: '100%', padding: '36px 28px 28px', textAlign: 'center', boxShadow: '0 24px 60px rgba(59,42,32,.3)', direction: 'rtl' }}>
+            <button onClick={() => setPromoOpen(false)} aria-label="סגירה" style={{ position: 'absolute', top: 16, left: 16, border: 'none', background: '#F6E9DC', cursor: 'pointer', width: 34, height: 34, borderRadius: '50%', color: '#6E5240', fontSize: 18, lineHeight: 1, zIndex: 1 }}>×</button>
+            {(config.promoImage || '').trim()
+              ? <img src={config.promoImage} alt="מבצע" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: 14, margin: '6px 0 2px' }} />
+              : <p style={{ color: '#4A3529', fontSize: (config.promoTextSize || 24), fontWeight: 800, lineHeight: 1.5, margin: '8px 0 4px', whiteSpace: 'pre-line', wordBreak: 'break-word' }}>{config.promoPopup}</p>}
+          </div>
+        </div>
+      )}
       {modal === 'how' && <HowItWorksModal initialStep={howStep} onClose={() => setModal(null)} />}
       {modal === 'tips' && <TipsModal onClose={() => setModal(null)} />}
       {modal === 'confirm' && (
@@ -347,8 +362,8 @@ export default function App() {
       )}
       {modal === 'blessing' && (
         <BlessingModal blessing={blessing} setBlessing={setBlessing}
-          onContinue={() => { setModal(null); setStep(3); setPayError(null); }}
-          onSkip={() => { setBlessing(''); setModal(null); setStep(3); setPayError(null); }}
+          onContinue={() => { setModal(null); setStep(2); setPayError(null); }}
+          onSkip={() => { setBlessing(''); setModal(null); setStep(2); setPayError(null); }}
           onClose={() => setModal(null)} />
       )}
       {modal === 'privacy' && <LegalModal doc={legalDocs.privacy} onClose={() => setModal(null)} />}

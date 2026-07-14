@@ -116,7 +116,7 @@ export default function UploadScreen({
             background: photos.length >= 2 ? pillBtn.background : '#D9C4B2',
             boxShadow: photos.length >= 2 ? pillBtn.boxShadow : 'none',
             cursor: photos.length >= 2 ? 'pointer' : 'not-allowed' }}>
-          המשך לתשלום
+          המשך לפרטים
         </button>
       </div>
     </div>

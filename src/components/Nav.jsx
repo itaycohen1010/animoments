@@ -6,7 +6,7 @@ export default function Nav({ step, journeyPct, journeyLabel, onHome, onStart })
   return (
     <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(250,240,230,.88)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(196,80,46,.12)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
-        <button onClick={onHome} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: C.ink }}>
+        <button onClick={onHome} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: C.ink, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontWeight: 900, fontSize: 20, letterSpacing: '-0.01em' }}>{config.brandName}</span>
         </button>
         <div style={{ flex: 1 }} />
