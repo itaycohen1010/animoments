@@ -19,7 +19,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
     <div data-screen-label="Landing">
       <div style={{ position: 'relative', overflow: 'hidden', background: `radial-gradient(900px 480px at 50% -120px, #FFE3C4, transparent), ${C.cream}` }}>
         <div className="hero-pad" style={{ maxWidth: 1080, margin: '0 auto', padding: '72px 24px 40px', textAlign: 'center', animation: 'rise-in .6s ease both' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: C.badgeBg, border: `1px solid ${C.badgeBorder}`, color: C.badgeText, fontWeight: 700, fontSize: 14, padding: '6px 16px', borderRadius: 999, marginBottom: 26 }}>✨ מהתמונות שבטלפון — לסרטון מרגש</div>
+          <div style={{ height: 54 }}></div>
           <h1 style={{ fontWeight: 900, fontSize: 'clamp(2.3rem, 6vw, 4rem)', lineHeight: 1.15, margin: '0 auto 20px', maxWidth: 760, letterSpacing: '-0.01em' }}>
             הופכים את הזכרונות שלכם <span style={{ color: C.accent }}>לסרטון מרגש</span>
           </h1>

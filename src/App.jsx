@@ -348,7 +348,6 @@ export default function App() {
       {promoOpen && ((config.promoPopup || '').trim() || (config.promoImage || '').trim()) && (
         <div onClick={() => setPromoOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(59,42,32,.55)', backdropFilter: 'blur(5px)', zIndex: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="מבצע" style={{ position: 'relative', background: '#fff', borderRadius: 24, maxWidth: 420, width: '100%', padding: '36px 28px 28px', textAlign: 'center', boxShadow: '0 24px 60px rgba(59,42,32,.3)', direction: 'rtl' }}>
-            <button onClick={() => setPromoOpen(false)} aria-label="סגירה" style={{ position: 'absolute', top: 16, left: 16, border: 'none', background: '#F6E9DC', cursor: 'pointer', width: 34, height: 34, borderRadius: '50%', color: '#6E5240', fontSize: 18, lineHeight: 1, zIndex: 1 }}>×</button>
             {(config.promoImage || '').trim()
               ? <img src={config.promoImage} alt="מבצע" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: 14, margin: '6px 0 2px' }} />
               : <p style={{ color: '#4A3529', fontSize: (config.promoTextSize || 24), fontWeight: 800, lineHeight: 1.5, margin: '8px 0 4px', whiteSpace: 'pre-line', wordBreak: 'break-word' }}>{config.promoPopup}</p>}

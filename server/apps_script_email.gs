@@ -24,8 +24,8 @@ function doPost(e) {
   '<div dir="rtl" style="background:#EFE4D8;padding:24px 10px;font-family:Heebo,Arial,sans-serif">' +
    '<div style="max-width:620px;margin:0 auto;background:#FAF0E6;border-radius:8px;overflow:hidden">' +
     '<div style="background:#2E1F17;padding:26px 20px;text-align:center">' +
-     '<div style="margin-bottom:14px">' +
-      '<img src="https://glittery-hamster-8da1b1.netlify.app/logo-mark.png" alt="זכרונימציה" width="66" height="66" style="width:66px;height:66px;border-radius:14px" />' +
+     '<div style="margin-bottom:14px;display:none">' +
+      '<img src="' + SITE_URL + '/logo-mark.png" alt="זכרונימציה" width="66" height="66" style="width:66px;height:66px;border-radius:14px" />' +
      '</div>' +
      '<div style="color:#E8A13C;font-weight:900;font-size:24px">זִכְרוֹנִימַצְיָה</div>' +
      '<div style="color:rgba(250,240,230,.7);font-size:13px;margin-top:4px">הזכרונות שלכם — לסרטון מרגש</div>' +
@@ -48,7 +48,7 @@ function doPost(e) {
       '</div>' +
      '</div>' +
      '<div style="text-align:center;margin-bottom:22px">' +
-      '<a href="' + SITE_URL + '" style="display:inline-block;background:#C4502E;color:#fff;text-decoration:none;font-weight:800;font-size:15px;padding:13px 34px;border-radius:999px">לאתר שלנו ולהזמנה נוספת ←</a>' +
+      '<a href="' + SITE_URL + '" style="display:inline-block;background:#C4502E;color:#fff;text-decoration:none;font-weight:800;font-size:15px;padding:13px 34px;border-radius:999px">לאתר שלנו</a>' +
       '<div style="color:#9A8979;font-size:12px;margin-top:8px;direction:ltr">' + SITE_URL + '</div>' +
      '</div>' +
      '<p style="margin:0;color:#9A8979;font-size:13px;text-align:center">נשלח באהבה מזכרונימציה ❤️</p>' +
@@ -59,13 +59,25 @@ function doPost(e) {
   MailApp.sendEmail({
     to: d.to_email,
     subject: 'ההזמנה שלכם התקבלה — הסרטון בדרך 🎬',
-    htmlBody: html
+    name: 'זכרונימציה',
+    replyTo: Session.getEffectiveUser().getEmail(),
+    htmlBody: html,
+    body: 'תודה, ' + d.to_name + '!\n\n' +
+          'ההזמנה התקבלה ואנחנו כבר מתחילים לעבוד על הסרטון.\n\n' +
+          'חבילה: ' + d.package_name + '\n' +
+          'מחיר: ₪' + d.package_price + '\n' +
+          'תמונות: ' + d.photo_count + '\n' +
+          'תאריך: ' + d.order_date + '\n\n' +
+          'אנחנו יוצרים את הסרטון — זה לוקח עד 48 שעות. כשהוא מוכן, תקבלו מייל עם קישור לצפייה והורדה.\n' +
+          'יש שאלה? פשוט השיבו למייל הזה.\n\n' +
+          'נשלח באהבה מזכרונימציה\n' + SITE_URL
   });
 
   // ---------- התראה אליכם ----------
   MailApp.sendEmail({
     to: Session.getEffectiveUser().getEmail(),
     subject: '🎬 הזמנה חדשה! ' + d.to_name + ' · ' + d.phone,
+    name: 'זכרונימציה',
     body: 'חבילה: ' + d.package_name + ' (₪' + d.package_price + ')\n' +
           'תמונות: ' + d.photo_count + '\n' +
           'מייל: ' + d.to_email + '\n' +

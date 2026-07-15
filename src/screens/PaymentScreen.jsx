@@ -120,7 +120,9 @@ export default function PaymentScreen({ pkg, photoCount, form, card, setCard, pa
           </span>
         </div>
 
-        {/* coupon code (one coupon; stacks with the bundle's own discount) */}
+        {/* COUPON FIELD REMOVED FROM SITE (per request). Coupon logic (applyCoupon,
+            config.coupons, payPrice/couponOff) is kept above so it can be re-enabled later.
+            To re-add, restore the {!coupon ? (...) : (...)} block here.
         {!coupon ? (
           <>
             <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
@@ -140,6 +142,7 @@ export default function PaymentScreen({ pkg, photoCount, form, card, setCard, pa
             <button onClick={() => { setCoupon(null); setCouponError(null); }} aria-label="הסרת הקופון" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#6B8A61', fontSize: 17, lineHeight: 1, padding: '2px 4px', flexShrink: 0 }}>×</button>
           </div>
         )}
+        */}
         <div style={{ height: 8 }} />
         <div style={{ display: 'inline-block', background: C.badgeBg, border: `1px solid ${C.badgeBorder}`, color: C.badgeText, fontWeight: 700, fontSize: 12.5, padding: '4px 12px', borderRadius: 999, marginBottom: 18 }}>זוהי הדגמה — לא יתבצע חיוב אמיתי</div>
 

@@ -20,7 +20,7 @@ export default function BlessingModal({ blessing, setBlessing, onContinue, onSki
         <span style={{ color: C.muted, fontSize: '.82rem' }}>עד {BLESSING_MAX} תווים</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <button onClick={onContinue} style={{ ...pillBtn, width: '100%' }}>המשך לתשלום</button>
+        <button onClick={onContinue} disabled={!blessing.trim()} style={{ ...pillBtn, width: '100%', cursor: blessing.trim() ? 'pointer' : 'not-allowed', background: blessing.trim() ? pillBtn.background : '#E4C4A8', boxShadow: blessing.trim() ? pillBtn.boxShadow : 'none', opacity: blessing.trim() ? 1 : .7 }}>המשך לתשלום</button>
         <button onClick={onSkip} style={{ ...smallGhostBtn, width: '100%', fontSize: 15, padding: '12px 20px' }}>דילוג — בלי ברכה</button>
       </div>
     </Modal>
