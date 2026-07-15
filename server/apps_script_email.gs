@@ -8,7 +8,7 @@
 // החליפו את SITE_URL בכתובת האתר שלכם כשתהיה.
 // ===================================================================
 
-const SITE_URL = 'https://www.animoment.co.il';
+const SITE_URL = 'https://animoment.co.il';
 
 // שער אבטחה: האתר שולח את הטוקן הזה בכל בקשה. חובה שיהיה זהה לערך שבאתר (config).
 // זה חוסם שימוש לרעה מזדמן בכתובת ה-Web App (לא הגנה מוחלטת — הטוקן גלוי גם בקוד האתר).
@@ -19,6 +19,12 @@ function esc(v) {
   return String(v == null ? '' : v)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// הריצו את הפונקציה הזו פעם אחת מהעורך (▶ Run) כדי לאשר הרשאות שליחת מייל.
+// אם קיבלתם מייל "בדיקה — עובד!" — ההרשאות תקינות.
+function testMail() {
+  MailApp.sendEmail(Session.getEffectiveUser().getEmail(), 'בדיקה', 'עובד!');
 }
 
 function doPost(e) {

@@ -5,6 +5,15 @@ import { pillBtn, smallGhostBtn } from '../styles.js';
 // Screen 0 — landing page: hero, dictionary word, filmstrip, how-it-works, pricing, closing CTA.
 export default function LandingScreen({ onStart, onOpenHow }) {
   const [lightbox, setLightbox] = useState(null); // { title, video }
+  const [openFaq, setOpenFaq] = useState(null);
+  const faqs = [
+    { q: 'איך עובד תהליך יצירת הסרטון?', a: 'אתם מעלים תמונות, מסדרים אותן לפי הסדר הרצוי ומשלימים את ההזמנה. לאחר מכן, הכלים המתקדמים שלנו והצוות המקצועי יחברו אותן לסרטון אנימציה זורם הכולל סאונד מותאם.' },
+    { q: 'תוך כמה זמן אקבל את הסרטון?', a: 'זמן האספקה הוא לרוב מספר שעות, ועד מקסימום 48 שעות. כל סרטון עובר תהליך כפול: תחילה עיבוד מורכב של בינה מלאכותית, ולאחר מכן גימור והתאמות של עורכי אנימציה ווידאו אנושיים, כדי להבטיח את התוצאה האיכותית ביותר.' },
+    { q: 'מה קורה לתמונות שאני מעלה?', a: 'הפרטיות שלכם מובטחת. התמונות שאתם מעלים משמשות אך ורק ליצירת הסרטון שלכם. אנחנו לא שומרים את התמונות במערכת ולא עושים בהן שום שימוש נוסף לאחר מסירת התוצר.' },
+    { q: 'האם ניתן לקבל החזר כספי?', a: 'לא. מכיוון שכל סרטון מיוצר במיוחד ובהתאמה אישית מלאה עבורכם, ודורש שעות של עריכה אנושית ומשאבי מחשוב יקרים, לא ניתן לבטל הזמנה או לקבל החזר כספי לאחר תחילת העבודה. אנא ודאו שהתמונות והסדר שלהן מושלמים מבחינתכם לפני אישור התשלום.' },
+    { q: 'האם התוצאה תמיד נראית מציאותית ב-100%?', a: 'טכנולוגיית הבינה המלאכותית שלנו מפיקה תוצאות מרהיבות, אך מטבעה ייתכנו תנועות אמנותיות בלתי צפויות או עיוותים קלים באנימציה. זהו למעשה הקסם והייחוד של יצירה ב-AI, שמבטיח שכל סרטון הוא יצירה חד-פעמית.' },
+    { q: 'כמה תמונות כדאי להעלות?', a: 'המערכת מאפשרת העלאה של בין 8 ל-30 תמונות. מומלץ להעלות תמונות ברורות ומוארות. כל מעבר בין שתי תמונות ייצר קטע אנימציה של כ-5 שניות.' }
+  ];
 
   // Build the right player for a URL: YouTube/Vimeo → iframe embed, else <video>.
   const playerEl = (url) => {
@@ -130,6 +139,29 @@ export default function LandingScreen({ onStart, onOpenHow }) {
         <h2 style={{ fontWeight: 900, fontSize: 'clamp(2rem, 5vw, 3rem)', lineHeight: 1.2, color: '#fff', margin: '0 0 10px', letterSpacing: '-0.01em' }}>מוכנים להתחיל?</h2>
         <p style={{ color: '#FFE9D6', fontSize: '1.1rem', margin: '0 0 34px' }}>כל התהליך לוקח כחמש דקות.</p>
         <button onClick={() => onStart()} style={{ border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 18, color: C.accent, background: '#fff', padding: '17px 46px', borderRadius: 999, boxShadow: '0 12px 30px rgba(59,42,32,.3)' }}>העלאת תמונות</button>
+      </div>
+
+      {/* FAQ accordion */}
+      <div id="faq" style={{ background: C.cream, padding: '56px 20px' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <h2 style={{ fontWeight: 900, fontSize: 'clamp(1.5rem, 4vw, 2rem)', textAlign: 'center', margin: '0 0 8px', color: C.ink }}>שאלות ותשובות</h2>
+          <p style={{ textAlign: 'center', color: C.body, fontSize: '1rem', margin: '0 0 28px' }}>לחצו על שאלה כדי לראות את התשובה</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {faqs.map((f, i) => (
+              <div key={i} style={{ background: '#fff', border: '1px solid #F0D9C4', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 14px rgba(180,100,70,.06)' }}>
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 22px', textAlign: 'right', direction: 'rtl' }}>
+                  <span style={{ fontWeight: 800, fontSize: '1.05rem', color: C.ink }}>{f.q}</span>
+                  <span style={{ flexShrink: 0, width: 28, height: 28, borderRadius: '50%', background: '#FBE4D7', color: C.accent, fontWeight: 900, fontSize: 20, lineHeight: '26px', textAlign: 'center' }}>{openFaq === i ? '−' : '+'}</span>
+                </button>
+                {openFaq === i && (
+                  <div style={{ padding: '0 22px 20px', direction: 'rtl' }}>
+                    <p style={{ color: C.body, fontSize: '.98rem', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-line' }}>{f.a}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* example-video lightbox */}

@@ -11,7 +11,7 @@ export default function BlessingModal({ blessing, setBlessing, onContinue, onSki
     <Modal onClose={onClose} label="ברכה אישית לסרטון" maxWidth={460}>
       <div style={{ fontSize: 32, marginBottom: 8 }}>💌</div>
       <h3 style={{ fontWeight: 900, fontSize: '1.35rem', margin: '0 0 6px' }}>רוצים להוסיף ברכה אישית?</h3>
-      <p style={{ color: C.body, fontSize: '.95rem', lineHeight: 1.8, margin: '0 0 16px' }}>הברכה תופיע בתוך הסרטון — משפט או שניים מהלב. אפשר גם לדלג.</p>
+      <p style={{ color: C.body, fontSize: '.95rem', lineHeight: 1.8, margin: '0 0 16px' }}>הברכה תופיע בסוף הסרטון- כמה משפטים מהלב</p>
       <textarea value={blessing} onChange={(e) => setBlessing(e.target.value.slice(0, BLESSING_MAX))} rows={4}
         placeholder="לדוגמה: לסבתא רחל היקרה, שמונים שנות אהבה במשפחה אחת. אוהבים תמיד ❤️"
         style={{ width: '100%', boxSizing: 'border-box', direction: 'rtl', resize: 'none', border: `1.5px solid ${C.borderStrong}`, background: '#FFFDFA', borderRadius: 14, padding: '13px 16px', fontSize: 16, color: C.ink, outline: 'none', fontFamily: "'Heebo', sans-serif", lineHeight: 1.7 }} />

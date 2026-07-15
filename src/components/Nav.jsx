@@ -15,6 +15,7 @@ export default function Nav({ step, journeyPct, journeyLabel, onHome, onStart })
             <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, fontSize: 15 }}>
               <a href="#how" style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>איך זה עובד</a>
               <a href="#pricing" style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>מחירים</a>
+              <a href="#faq" style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>שאלות ותשובות</a>
             </div>
             <button onClick={onStart} style={{ border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: '#fff', background: C.accent, padding: '10px 22px', borderRadius: 999, boxShadow: '0 6px 16px rgba(196,80,46,.28)' }}>מתחילים</button>
           </>

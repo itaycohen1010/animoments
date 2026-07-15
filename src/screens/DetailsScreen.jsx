@@ -31,8 +31,6 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
           <span style={{ fontWeight: 900, fontSize: '1.9rem', color: C.accent }}>₪{pkg.price}</span>
         </div>
 
-        <div style={{ display: 'inline-block', background: C.badgeBg, border: `1px solid ${C.badgeBorder}`, color: C.badgeText, fontWeight: 700, fontSize: 13, padding: '5px 14px', borderRadius: 999, marginBottom: 22 }}>זוהי הדגמה — לא יתבצע חיוב אמיתי</div>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 8 }}>
           {field('השם שלכם *', 'name', 'text', 'לדוגמה: רותי לוי', nameInvalid)}
           {field('מספר טלפון *', 'phone', 'tel', '050-1234567', phoneInvalid)}

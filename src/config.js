@@ -7,12 +7,12 @@ export const config = {
 
   // Optional promo banner shown under the hero title (e.g. coupon announcement).
   // Leave empty ('') to hide it.
-  announcement: '',
+  announcement: '25% הנחה- WELCOME25',
 
   // Optional promo/coupon popup shown once when the page opens. Empty ('') = no popup.
   promoPopup: '',
   promoTextSize: 24, // popup text size in px (adjust to taste)
-  promoImage: 'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1784097150/Launch_Flyer_y1a88b.png', // optional image URL shown in the popup instead of text
+  promoImage: 'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1784134979/Launch_Flyer_y1a88b.png', // optional image URL shown in the popup instead of text
 
   // Cloudinary (unsigned upload). Leave empty for demo mode (no real upload).
   cloudinary: {
@@ -64,11 +64,11 @@ export const config = {
   simulateFailure: false,
 
   packages: [
-    { key: 'small',  name: 'רגע קטן',        price: 99,  discount: 0, maxPhotos: 8,
+    { key: 'small',  name: 'רגע קטן',        price: 99,  discount: 10, maxPhotos: 8,
       features: ['עד 8 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] },
-    { key: 'full',   name: 'הסיפור המלא',    price: 179, discount: 0, maxPhotos: 15, featured: true,
+    { key: 'full',   name: 'הסיפור המלא',    price: 199, discount: 40, maxPhotos: 15, featured: true,
       features: ['עד 15 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] },
-    { key: 'legacy', name: 'מזכרת לחיים', price: 319, discount: 0, maxPhotos: 30,
+    { key: 'legacy', name: 'מורשת משפחתית', price: 299, discount: 15, maxPhotos: 30,
       features: ['עד 30 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] }
   ],
 
