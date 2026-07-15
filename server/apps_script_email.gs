@@ -8,16 +8,41 @@
 // החליפו את SITE_URL בכתובת האתר שלכם כשתהיה.
 // ===================================================================
 
-const SITE_URL = 'https://YOUR-SITE-URL.co.il';
+const SITE_URL = 'https://www.animoment.co.il';
 
-// הריצו את הפונקציה הזו פעם אחת מהעורך (▶ Run) כדי לאשר הרשאות שליחת מייל.
-// אם קיבלתם מייל "בדיקה — עובד!" — ההרשאות תקינות.
-function testMail() {
-  MailApp.sendEmail(Session.getEffectiveUser().getEmail(), 'בדיקה', 'עובד!');
+// שער אבטחה: האתר שולח את הטוקן הזה בכל בקשה. חובה שיהיה זהה לערך שבאתר (config).
+// זה חוסם שימוש לרעה מזדמן בכתובת ה-Web App (לא הגנה מוחלטת — הטוקן גלוי גם בקוד האתר).
+const SCRIPT_TOKEN = 'am_9f3k2xQ7pL5vR8wZ1tB6nH0';
+
+// בריחת תווי HTML כדי למנוע הזרקת קוד למייל דרך שם/טלפון/ברכה שהלקוח מקליד.
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function doPost(e) {
-  const d = JSON.parse(e.postData.contents);
+  const raw = JSON.parse(e.postData.contents);
+
+  // שער טוקן — דוחים בקשות בלי הטוקן הנכון
+  if (!raw || raw.token !== SCRIPT_TOKEN) {
+    return ContentService.createTextOutput('forbidden');
+  }
+
+  // אימות שדות + הגבלת אורך + בריחת HTML
+  const d = {
+    order_id: esc(String(raw.order_id || '').slice(0, 20)),
+    to_email: String(raw.to_email || '').slice(0, 120),
+    to_name: esc(String(raw.to_name || '').slice(0, 80)),
+    phone: esc(String(raw.phone || '').slice(0, 30)),
+    package_name: esc(String(raw.package_name || '').slice(0, 60)),
+    package_price: esc(String(raw.package_price || '').slice(0, 12)),
+    photo_count: esc(String(raw.photo_count || '').slice(0, 6)),
+    order_date: esc(String(raw.order_date || '').slice(0, 40))
+  };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.to_email)) {
+    return ContentService.createTextOutput('bad email');
+  }
 
   // ---------- מייל מעוצב ללקוח ----------
   const html =
@@ -34,6 +59,7 @@ function doPost(e) {
      '<h1 style="margin:0 0 6px;color:#3B2A20;font-size:24px">תודה, ' + d.to_name + '! 🎉</h1>' +
      '<p style="margin:0 0 22px;color:#6E5240;font-size:15px;line-height:1.7">ההזמנה התקבלה ואנחנו כבר מתחילים לעבוד על הסרטון.</p>' +
      '<div style="background:#fff;border:1px solid #F0D9C4;border-radius:12px;padding:8px 20px;margin-bottom:22px">' +
+      row('מספר הזמנה', d.order_id) +
       row('חבילה', d.package_name) +
       row('מחיר', '₪' + d.package_price) +
       row('תמונות', d.photo_count) +
@@ -76,9 +102,10 @@ function doPost(e) {
   // ---------- התראה אליכם ----------
   MailApp.sendEmail({
     to: Session.getEffectiveUser().getEmail(),
-    subject: '🎬 הזמנה חדשה! ' + d.to_name + ' · ' + d.phone,
+    subject: '🎬 הזמנה חדשה! ' + d.order_id + ' · ' + d.to_name,
     name: 'זכרונימציה',
-    body: 'חבילה: ' + d.package_name + ' (₪' + d.package_price + ')\n' +
+    body: 'מספר הזמנה: ' + d.order_id + '\n' +
+          'חבילה: ' + d.package_name + ' (₪' + d.package_price + ')\n' +
           'תמונות: ' + d.photo_count + '\n' +
           'מייל: ' + d.to_email + '\n' +
           'טלפון: ' + d.phone + '\n' +

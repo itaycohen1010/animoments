@@ -144,6 +144,7 @@ export default function PaymentScreen({ pkg, photoCount, form, card, setCard, pa
         )}
         */}
         <div style={{ height: 8 }} />
+        <div style={{ display: 'inline-block', background: C.badgeBg, border: `1px solid ${C.badgeBorder}`, color: C.badgeText, fontWeight: 700, fontSize: 12.5, padding: '4px 12px', borderRadius: 999, marginBottom: 18 }}>זוהי הדגמה — לא יתבצע חיוב אמיתי</div>
 
         {makeWebhook ? (
           <>

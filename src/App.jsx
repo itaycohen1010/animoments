@@ -46,7 +46,21 @@ export default function App() {
   const toastTimer = useRef(null);
   const uploadFolderRef = useRef(null);
   const detailsUploadedRef = useRef(false);
+  const orderIdRef = useRef(null);
   const paidPriceRef = useRef(null); // final price after coupon, reported by PaymentScreen
+
+  // short order id, generated once per order (e.g. AM-150726-4F9K)
+  const getOrderId = () => {
+    if (!orderIdRef.current) {
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const date = pad(d.getDate()) + pad(d.getMonth() + 1) + String(d.getFullYear()).slice(2);
+      let r = '';
+      for (let i = 0; i < 4; i++) r += 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)];
+      orderIdRef.current = 'AM-' + date + '-' + r;
+    }
+    return orderIdRef.current;
+  };
 
   const pkg = config.packages.find((p) => p.key === pkgKey) || defaultPkg;
   const cloudinaryConfigured = !!(config.cloudinary.cloudName && config.cloudinary.uploadPreset);
@@ -174,6 +188,8 @@ export default function App() {
       method: 'POST',
       mode: 'no-cors', // Apps Script rejects CORS preflight — must stay a "simple request"
       body: JSON.stringify({
+        token: 'am_9f3k2xQ7pL5vR8wZ1tB6nH0',
+        order_id: getOrderId(),
         to_email: form.email.trim(), to_name: form.name.trim(), phone: form.phone.trim(),
         package_name: pkg.name, package_price: paidPriceRef.current ?? pkg.price,
         photo_count: photos.length, order_date: new Date().toLocaleString('he-IL')
@@ -206,7 +222,7 @@ export default function App() {
       const d = new Date();
       const pad = (n) => String(n).padStart(2, '0');
       const stamp = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
-      uploadFolderRef.current = `video-orders/${name}-${stamp}`;
+      uploadFolderRef.current = `video-orders/${getOrderId()}_${name}-${stamp}`;
     }
     const folder = uploadFolderRef.current;
     const tag = folder.split('/')[1];
@@ -228,18 +244,7 @@ export default function App() {
         p.uploaded = true;
         setUploadedCount(i + 1);
       }
-      if (!detailsUploadedRef.current) {
-        const details = `שם: ${form.name.trim()}\nטלפון: ${form.phone.trim()}\nאימייל: ${form.email.trim()}\nחבילה: ${pkg.name} (₪${pkg.price})\nמספר תמונות: ${photos.length}\nברכה: ${blessing.trim() || '(ללא ברכה)'}\nתאריך: ${new Date().toLocaleString('he-IL')}`;
-        const fd = new FormData();
-        fd.append('file', new File([details], 'order-details.txt', { type: 'text/plain' }));
-        fd.append('upload_preset', config.cloudinary.uploadPreset);
-        fd.append('folder', folder);
-        fd.append('tags', tag);
-        fd.append('public_id', 'order-details');
-        const res = await fetch(`${base}/raw/upload`, { method: 'POST', body: fd });
-        if (!res.ok) throw new Error('details upload failed: ' + res.status);
-        detailsUploadedRef.current = true;
-      }
+      // (customer PII is NOT stored in Cloudinary — details are sent by email only)
       setTimeout(() => { setResult('done'); sendConfirmationEmail(); }, 400);
     } catch (err) {
       console.warn('Cloudinary upload error', err);
@@ -286,6 +291,7 @@ export default function App() {
   const resetAll = () => {
     uploadFolderRef.current = null;
     detailsUploadedRef.current = false;
+    orderIdRef.current = null;
     setStep(0); setPhotos([]); setForm({ name: '', phone: '', email: '' });
     setCard({ name: '', num: '', exp: '', cvv: '' });
     setBlessing('');
@@ -333,7 +339,7 @@ export default function App() {
 
       {step === 4 && (
         <ResultScreen result={result} uploadedCount={uploadedCount} photos={photos}
-          cloudinaryConfigured={cloudinaryConfigured}
+          cloudinaryConfigured={cloudinaryConfigured} orderId={orderIdRef.current}
           onRetry={startUpload} onReset={resetAll} />
       )}
 

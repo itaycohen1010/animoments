@@ -3,7 +3,7 @@ import { colors as C } from '../config.js';
 import { pillBtn } from '../styles.js';
 
 // Screen 4 — result: processing spinner with live counter / failure + retry / success.
-export default function ResultScreen({ result, uploadedCount, photos, cloudinaryConfigured, onRetry, onReset }) {
+export default function ResultScreen({ result, uploadedCount, photos, cloudinaryConfigured, orderId, onRetry, onReset }) {
   return (
     <div data-screen-label="Result" style={{ maxWidth: 640, margin: '0 auto', padding: '40px 20px 60px', animation: 'rise-in .5s ease both', width: '100%', boxSizing: 'border-box' }}>
       <div className="card-pad" style={{ background: '#fff', borderRadius: 24, padding: '40px 30px', boxShadow: '0 14px 40px rgba(180,100,70,.16)', textAlign: 'center' }}>
@@ -28,6 +28,9 @@ export default function ResultScreen({ result, uploadedCount, photos, cloudinary
           <>
             <div style={{ fontSize: 52, marginBottom: 10 }}>🎉</div>
             <h1 style={{ fontWeight: 900, fontSize: 'clamp(1.6rem, 5vw, 2.2rem)', margin: '0 0 10px' }}>התמונות התקבלו ✓</h1>
+            {cloudinaryConfigured && orderId && (
+              <div style={{ display: 'inline-block', background: '#FBE4D7', color: '#A83E20', fontWeight: 800, fontSize: '.95rem', padding: '6px 16px', borderRadius: 999, marginBottom: 14 }}>מספר הזמנה: {orderId}</div>
+            )}
             <p style={{ color: C.body, fontSize: '1rem', lineHeight: 1.7, margin: '0 0 26px' }}>
               {cloudinaryConfigured
                 ? 'קיבלנו את התמונות שלכם. ניצור איתכם קשר בטלפון שמסרתם תוך 48 שעות.'

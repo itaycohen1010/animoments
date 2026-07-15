@@ -7,7 +7,7 @@ export const config = {
 
   // Optional promo banner shown under the hero title (e.g. coupon announcement).
   // Leave empty ('') to hide it.
-  announcement: 'קוד קופון WELCOME25',
+  announcement: '',
 
   // Optional promo/coupon popup shown once when the page opens. Empty ('') = no popup.
   promoPopup: '',
@@ -41,7 +41,7 @@ export const config = {
     // Fixed Grow payment pages, one per package. To verify payment automatically,
     // set each page's "עמוד תודה → קישור לעמוד תודה באתר שלך" (thank-you return URL)
     // in the Grow dashboard to your site + ?paid=1, e.g.:
-    //   https://glittery-hamster-8da1b1.netlify.app/?paid=1
+    //   https://animoment.co.il/?paid=1
     // After a successful charge Grow returns the customer here, the payment tab
     // signals the original tab, and the photos upload automatically.
     small: 'https://pay.grow.link/ODkyNTA~2844b6317cda0e9071e47fc4916ae680-MzY5MjczOA',
@@ -51,11 +51,11 @@ export const config = {
 
   // Coupon codes — code (uppercase) -> discount.
   // type 'percent' = % off the package price; type 'fixed' = ₪ off.
-  // coupons: {
-  //   WELCOME10: { type: 'percent', value: 10 },
-  //   FAMILY20: { type: 'percent', value: 20 },
-  //   SAVE50: { type: 'percent', value: 50 }
-  // },
+  coupons: {
+    WELCOME10: { type: 'percent', value: 10 },
+    FAMILY20: { type: 'percent', value: 20 },
+    SAVE50: { type: 'percent', value: 50 }
+  },
 
   // Validation on/off (set true for production!)
   requireFields: true,
@@ -64,11 +64,11 @@ export const config = {
   simulateFailure: false,
 
   packages: [
-    { key: 'small',  name: 'רגע קטן',        price: 99,  discount: 0, maxPhotos: 8,
+    { key: 'small',  name: 'רגע קטן',        price: 99,  discount: 10, maxPhotos: 8,
       features: ['עד 8 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] },
-    { key: 'full',   name: 'הסיפור המלא',    price: 179, discount: 0, maxPhotos: 15, featured: true,
+    { key: 'full',   name: 'הסיפור המלא',    price: 199, discount: 40, maxPhotos: 15, featured: true,
       features: ['עד 15 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] },
-    { key: 'legacy', name: 'מורשת משפחתית', price: 279, discount: 0, maxPhotos: 30,
+    { key: 'legacy', name: 'מורשת משפחתית', price: 299, discount: 15, maxPhotos: 30,
       features: ['עד 30 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] }
   ],
 
@@ -85,7 +85,7 @@ export const config = {
     { img: 'https://picsum.photos/seed/picnic/440/280',      title: 'הטיול המשפחתי לים', video: '' }
   ],
 
-  contactEmail: 'myanimoments@gmail.com'
+  contactEmail: 'animoments@gmail.com'
 };
 
 // Apply each package's discount (percent): price becomes the sale price,
