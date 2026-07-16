@@ -47,9 +47,9 @@ export default function LandingScreen({ onStart, onOpenHow }) {
         </div>
 
         {/* dictionary word — connected to the filmstrip */}
-        <div style={{ margin: '30px 0 0', background: C.filmDark, padding: '44px 24px 30px', textAlign: 'right', direction: 'rtl' }}>
-          <div style={{ maxWidth: 640, margin: '0 auto' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+        <div style={{ margin: '30px 0 0', background: C.filmDark, padding: '40px 24px 26px', textAlign: 'center', direction: 'rtl' }}>
+          <div style={{ maxWidth: 760, margin: '0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
               <span style={{ fontWeight: 900, fontSize: 'clamp(1.5rem, 4vw, 2rem)', color: '#E8A13C' }}>זִכְרוֹנִימַצְיָה</span>
               <span style={{ color: 'rgba(250,240,230,.6)', fontSize: '.9rem', fontStyle: 'italic' }}>שֵׁם עֶצֶם</span>
             </div>
@@ -64,7 +64,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
             {[0, 1].map((half) => (
               <div key={half} style={{ display: 'flex', gap: 10, padding: '8px 5px' }}>
                 {config.examples.map((ex, i) => (
-                  <a key={i} onClick={() => setLightbox({ title: ex.title, video: (ex.video || '').trim() })} style={{ position: 'relative', width: 220, height: 140, borderRadius: 6, overflow: 'hidden', background: '#4a352a', display: 'block', cursor: 'pointer' }}>
+                  <a key={i} onClick={() => setLightbox({ title: ex.title, video: (ex.video || '').trim() })} style={{ position: 'relative', width: 220, height: 140, borderRadius: 6, overflow: 'hidden', background: 'linear-gradient(135deg, #C4502E, #E8A13C)', display: 'block', cursor: 'pointer' }}>
                     <img src={ex.img} alt={`קטע מסרטון: ${ex.title}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'sepia(.22) saturate(1.12) brightness(.97)' }} />
                     <span aria-hidden="true" style={{ position: 'absolute', inset: 0, margin: 'auto', width: 42, height: 42, borderRadius: '50%', background: 'rgba(255,255,255,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.accent, fontSize: 15, boxShadow: '0 6px 16px rgba(59,42,32,.25)' }}>▶</span>
                     <span style={{ position: 'absolute', bottom: 0, right: 0, left: 0, direction: 'rtl', background: 'linear-gradient(to top, rgba(46,31,23,.85), transparent)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '18px 12px 8px', textAlign: 'right' }}>{ex.title}</span>

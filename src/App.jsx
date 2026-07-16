@@ -182,8 +182,11 @@ export default function App() {
   };
 
   // ---------- email ----------
+  const emailSentRef = useRef(false);
   const sendConfirmationEmail = () => {
+    if (emailSentRef.current) return;          // send once per order, even across upload retries
     if (!config.emailEndpoint || !form.email.trim()) return;
+    emailSentRef.current = true;
     fetch(config.emailEndpoint, {
       method: 'POST',
       mode: 'no-cors', // Apps Script rejects CORS preflight — must stay a "simple request"
@@ -199,6 +202,9 @@ export default function App() {
 
   // ---------- upload (runs AFTER payment) ----------
   const startUpload = async () => {
+    // Fire order emails the moment payment is confirmed — before upload — so a paid
+    // order is never lost even if Cloudinary is down.
+    sendConfirmationEmail();
     setStep(4); setResult('processing'); setUploadedCount(0);
     if (!cloudinaryConfigured) {
       // demo mode
@@ -209,7 +215,7 @@ export default function App() {
         if (config.simulateFailure && i >= Math.ceil(total / 2)) { clearInterval(t); setResult('failed'); return; }
         if (i >= total) {
           clearInterval(t); setUploadedCount(total);
-          setTimeout(() => { setResult('done'); sendConfirmationEmail(); }, 500);
+          setTimeout(() => { setResult('done'); }, 500);
           return;
         }
         setUploadedCount(i);
@@ -232,20 +238,29 @@ export default function App() {
       for (let i = 0; i < photos.length; i++) {
         const p = photos[i];
         if (p.uploaded) { setUploadedCount(i + 1); continue; }
-        const fd = new FormData();
-        fd.append('file', p.file);
-        fd.append('upload_preset', config.cloudinary.uploadPreset);
-        fd.append('folder', folder);
-        fd.append('tags', tag);
-        fd.append('public_id', String(i + 1)); // filename in Cloudinary = position in the video order
-        fd.append('context', `order=${i + 1}|from=${form.name.trim()}|phone=${form.phone.trim()}`);
-        const res = await fetch(`${base}/image/upload`, { method: 'POST', body: fd });
-        if (!res.ok) throw new Error('upload failed: ' + res.status);
+        // upload with up to 3 attempts (network hiccups / transient Cloudinary errors)
+        let res = null, lastErr = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const fd = new FormData();
+            fd.append('file', p.file);
+            fd.append('upload_preset', config.cloudinary.uploadPreset);
+            fd.append('folder', folder);
+            fd.append('tags', tag);
+            fd.append('public_id', String(i + 1)); // filename in Cloudinary = position in the video order
+            fd.append('context', `order=${i + 1}|from=${form.name.trim()}|phone=${form.phone.trim()}`);
+            res = await fetch(`${base}/image/upload`, { method: 'POST', body: fd });
+            if (res.ok) break;
+            lastErr = new Error('upload failed: ' + res.status);
+          } catch (e) { lastErr = e; }
+          await new Promise(r => setTimeout(r, 1200 * (attempt + 1))); // backoff before retry
+        }
+        if (!res || !res.ok) throw (lastErr || new Error('upload failed'));
         p.uploaded = true;
         setUploadedCount(i + 1);
       }
       // (customer PII is NOT stored in Cloudinary — details are sent by email only)
-      setTimeout(() => { setResult('done'); sendConfirmationEmail(); }, 400);
+      setTimeout(() => { setResult('done'); }, 400);
     } catch (err) {
       console.warn('Cloudinary upload error', err);
       setResult('failed');
@@ -292,6 +307,7 @@ export default function App() {
     uploadFolderRef.current = null;
     detailsUploadedRef.current = false;
     orderIdRef.current = null;
+    emailSentRef.current = false;
     setStep(0); setPhotos([]); setForm({ name: '', phone: '', email: '' });
     setCard({ name: '', num: '', exp: '', cvv: '' });
     setBlessing('');
