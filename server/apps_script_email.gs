@@ -65,11 +65,10 @@ function doPost(e) {
      '<h1 style="margin:0 0 6px;color:#3B2A20;font-size:24px">תודה, ' + d.to_name + '! 🎉</h1>' +
      '<p style="margin:0 0 22px;color:#6E5240;font-size:15px;line-height:1.7">ההזמנה התקבלה ואנחנו כבר מתחילים לעבוד על הסרטון.</p>' +
      '<div style="background:#fff;border:1px solid #F0D9C4;border-radius:12px;padding:8px 20px;margin-bottom:22px">' +
-      row('מספר הזמנה', d.order_id) +
       row('חבילה', d.package_name) +
-      row('מחיר', '₪' + d.package_price) +
       row('תמונות', d.photo_count) +
-      row('תאריך', d.order_date, true) +
+      row('תאריך', d.order_date) +
+      row('מספר הזמנה', d.order_id, true) +
      '</div>' +
      '<div style="background:#FBE4D7;border-radius:12px;padding:16px 20px;margin-bottom:22px">' +
       '<div style="font-weight:800;color:#A83E20;font-size:15px;margin-bottom:8px">מה עכשיו?</div>' +
@@ -97,7 +96,6 @@ function doPost(e) {
     body: 'תודה, ' + d.to_name + '!\n\n' +
           'ההזמנה התקבלה ואנחנו כבר מתחילים לעבוד על הסרטון.\n\n' +
           'חבילה: ' + d.package_name + '\n' +
-          'מחיר: ₪' + d.package_price + '\n' +
           'תמונות: ' + d.photo_count + '\n' +
           'תאריך: ' + d.order_date + '\n\n' +
           'אנחנו יוצרים את הסרטון — זה לוקח עד 48 שעות. כשהוא מוכן, תקבלו מייל עם קישור לצפייה והורדה.\n' +
@@ -111,7 +109,7 @@ function doPost(e) {
     subject: '🎬 הזמנה חדשה! ' + d.order_id + ' · ' + d.to_name,
     name: 'זכרונימציה',
     body: 'מספר הזמנה: ' + d.order_id + '\n' +
-          'חבילה: ' + d.package_name + ' (₪' + d.package_price + ')\n' +
+          'חבילה: ' + d.package_name + '\n' +
           'תמונות: ' + d.photo_count + '\n' +
           'מייל: ' + d.to_email + '\n' +
           'טלפון: ' + d.phone + '\n' +
