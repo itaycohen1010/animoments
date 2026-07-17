@@ -7,8 +7,10 @@ export default function UploadScreen({
   pkg, pkgKey, setPkgKey, photos, setPhotos,
   dragIndex, setDragIndex, dzOver, setDzOver,
   addFiles, reorder, touchDrag, fileInputRef,
-  showToast, onBack, onContinue, onOpenTips, onOpenHow
+  showToast, onBack, onContinue, onOpenTips, onOpenHow,
+  mood, setMood
 }) {
+  const moodList = ['מרגש', 'שמח וחגיגי', 'נוסטלגי', 'רגוע ועדין', 'אנרגטי', 'רומנטי'];
   return (
     <div data-screen-label="Upload" style={{ maxWidth: 880, margin: '0 auto', padding: '40px 20px 60px', animation: 'rise-in .5s ease both', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
@@ -109,13 +111,28 @@ export default function UploadScreen({
         <div style={{ textAlign: 'center', color: C.muted, fontSize: '.95rem', padding: '26px 0 34px' }}>עדיין לא נבחרו תמונות</div>
       )}
 
+      {/* music mood — optional emotional direction for the video's soundtrack */}
+      <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 20, padding: '20px 22px', margin: '4px 0 26px' }}>
+        <div style={{ fontWeight: 800, fontSize: '1.02rem', color: C.ink, marginBottom: 4 }}>איזו תחושה תרצו שהסרטון יעביר? <span style={{ color: C.accent, fontWeight: 700 }}>*</span></div>
+        <div style={{ color: C.body, fontSize: '.9rem', marginBottom: 14 }}>נבחר מוזיקה שתתאים לרגש שבחרתם.</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {moodList.map((label) => {
+            const active = mood === label;
+            return (
+              <button key={label} onClick={() => setMood(active ? '' : label)}
+                style={{ border: active ? `1.5px solid ${C.accent}` : `1.5px solid ${C.borderStrong}`, background: active ? C.accent : '#fff', color: active ? '#fff' : C.body, cursor: 'pointer', fontWeight: 700, fontSize: 14, padding: '9px 18px', borderRadius: 999, transition: 'all .15s ease' }}>{label}</button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="actions-row" style={{ display: 'flex', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <button onClick={onBack} style={ghostBtn}>חזרה</button>
-        <button onClick={onContinue} disabled={photos.length < 2}
+        <button onClick={() => { if (photos.length < 2) return; if (!mood) { showToast('בחרו את התחושה שתרצו שהסרטון יעביר'); return; } onContinue(); }} disabled={photos.length < 2 || !mood}
           style={{ ...pillBtn, padding: '13px 34px',
-            background: photos.length >= 2 ? pillBtn.background : '#D9C4B2',
-            boxShadow: photos.length >= 2 ? pillBtn.boxShadow : 'none',
-            cursor: photos.length >= 2 ? 'pointer' : 'not-allowed' }}>
+            background: (photos.length >= 2 && mood) ? pillBtn.background : '#D9C4B2',
+            boxShadow: (photos.length >= 2 && mood) ? pillBtn.boxShadow : 'none',
+            cursor: (photos.length >= 2 && mood) ? 'pointer' : 'not-allowed' }}>
           המשך לפרטים
         </button>
       </div>

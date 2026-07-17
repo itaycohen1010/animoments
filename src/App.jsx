@@ -29,10 +29,11 @@ export default function App() {
   const [photos, setPhotos] = useState([]);          // {id, url, file}
   const [dragIndex, setDragIndex] = useState(null);
   const [dzOver, setDzOver] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', email: '' });
+  const [form, setForm] = useState({ name: '', phone: '', email: '', email2: '' });
   const [formError, setFormError] = useState(null);
   const [card, setCard] = useState({ name: '', num: '', exp: '', cvv: '' });
   const [blessing, setBlessing] = useState('');
+  const [mood, setMood] = useState('');
   const [payError, setPayError] = useState(null);
   const [result, setResult] = useState('processing'); // processing | failed | done
   const [uploadedCount, setUploadedCount] = useState(0);
@@ -146,13 +147,17 @@ export default function App() {
   const validateDetails = () => {
     if (!config.requireFields) return null;
     const nameOk = form.name.trim().length > 0;
-    const phoneOk = (form.phone.match(/\d/g) || []).length >= 9;
+    const phoneDigits = (form.phone.match(/\d/g) || []).length;
+    const phoneRaw = form.phone.trim();
+    const phoneOk = /^0(5\d|[2-46-9])\d{7,8}$/.test(phoneRaw.replace(/[\s-]/g, '')) || (phoneRaw.startsWith('+') && phoneDigits >= 8 && phoneDigits <= 15);
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-    if (nameOk && phoneOk && emailOk) return null;
+    const email2Ok = form.email.trim() === (form.email2 || '').trim() && (form.email2 || '').trim().length > 0;
+    if (nameOk && phoneOk && emailOk && email2Ok) return null;
     const missing = [];
     if (!nameOk) missing.push('שם');
     if (!phoneOk) missing.push('מספר טלפון תקין');
     if (!emailOk) missing.push('כתובת אימייל תקינה');
+    if (emailOk && !email2Ok) return 'האימייל בשני השדות אינו זהה';
     if (missing.length === 1) return 'נא למלא ' + missing[0];
     return 'נא למלא ' + missing.slice(0, -1).join(', ') + ' ו' + missing[missing.length - 1];
   };
@@ -195,6 +200,7 @@ export default function App() {
         order_id: getOrderId(),
         to_email: form.email.trim(), to_name: form.name.trim(), phone: form.phone.trim(),
         package_name: pkg.name, package_price: paidPriceRef.current ?? pkg.price,
+        music_mood: mood || '(לא נבחר)',
         photo_count: photos.length, order_date: new Date().toLocaleString('he-IL')
       })
     }).catch((err) => console.warn('confirmation email failed', err));
@@ -228,7 +234,7 @@ export default function App() {
       const d = new Date();
       const pad = (n) => String(n).padStart(2, '0');
       const stamp = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
-      uploadFolderRef.current = `video-orders/${getOrderId()}_${name}-${stamp}`;
+      uploadFolderRef.current = `video-orders/${getOrderId()}_${name}-${stamp}${mood ? '_' + mood.replace(/\s+/g, '-') : ''}`;
     }
     const folder = uploadFolderRef.current;
     const tag = folder.split('/')[1];
@@ -308,9 +314,9 @@ export default function App() {
     detailsUploadedRef.current = false;
     orderIdRef.current = null;
     emailSentRef.current = false;
-    setStep(0); setPhotos([]); setForm({ name: '', phone: '', email: '' });
+    setStep(0); setPhotos([]); setForm({ name: '', phone: '', email: '', email2: '' });
     setCard({ name: '', num: '', exp: '', cvv: '' });
-    setBlessing('');
+    setBlessing(''); setMood('');
     setFormError(null); setPayError(null); setResult('processing'); setUploadedCount(0);
   };
 
@@ -336,6 +342,7 @@ export default function App() {
           dragIndex={dragIndex} setDragIndex={setDragIndex}
           dzOver={dzOver} setDzOver={setDzOver}
           addFiles={addFiles} reorder={reorder} touchDrag={touchDrag} fileInputRef={fileInputRef}
+          mood={mood} setMood={setMood}
           showToast={showToast}
           onBack={() => setStep(0)} onContinue={photosToPayment}
           onOpenTips={() => setModal('tips')} onOpenHow={openHow} />

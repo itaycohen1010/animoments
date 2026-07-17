@@ -5,13 +5,17 @@ import { pillBtn, ghostBtn, smallGhostBtn, inputStyle } from '../styles.js';
 // Screen 1 — customer details (name / phone / email). First step of the order flow.
 export default function DetailsScreen({ pkg, form, setForm, formError, setFormError, onBack, onContinue, onOpenHow }) {
   const nameInvalid = !!formError && form.name.trim().length === 0;
-  const phoneInvalid = !!formError && (form.phone.match(/\d/g) || []).length < 9;
+  const phoneRaw = form.phone.trim();
+  const phoneDigits = (form.phone.match(/\d/g) || []).length;
+  const phoneOk = /^0(5\d|[2-46-9])\d{7,8}$/.test(phoneRaw.replace(/[\s-]/g, '')) || (phoneRaw.startsWith('+') && phoneDigits >= 8 && phoneDigits <= 15);
+  const phoneInvalid = !!formError && !phoneOk;
   const emailInvalid = !!formError && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+  const email2Invalid = !!formError && ((form.email2 || '').trim() !== form.email.trim() || !(form.email2 || '').trim());
 
-  const field = (label, key, type, placeholder, invalid) => (
+  const field = (label, key, type, placeholder, invalid, noPaste) => (
     <div>
       <label style={{ display: 'block', fontWeight: 700, fontSize: '.95rem', marginBottom: 6 }}>{label}</label>
-      <input type={type} value={form[key]} onChange={(e) => { setForm({ ...form, [key]: e.target.value }); setFormError(null); }} placeholder={placeholder} style={inputStyle(invalid)} />
+      <input type={type} value={form[key] || ''} onChange={(e) => { setForm({ ...form, [key]: e.target.value }); setFormError(null); }} onPaste={noPaste ? (e) => e.preventDefault() : undefined} placeholder={placeholder} style={inputStyle(invalid)} />
     </div>
   );
 
@@ -33,8 +37,9 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 8 }}>
           {field('השם שלכם *', 'name', 'text', 'לדוגמה: רותי לוי', nameInvalid)}
-          {field('מספר טלפון *', 'phone', 'tel', '050-1234567', phoneInvalid)}
+          {field('מספר טלפון *', 'phone', 'tel', '050-1234567 או ‎+1 555 123 4567', phoneInvalid)}
           {field('כתובת אימייל *', 'email', 'email', 'ruti@gmail.com', emailInvalid)}
+          {field('אימות כתובת אימייל *', 'email2', 'email', 'הקלידו שוב את האימייל', email2Invalid, true)}
         </div>
         {formError && <div style={{ textAlign: 'center', color: C.accentDark, fontWeight: 700, fontSize: '.95rem', margin: '10px 0 0' }}>{formError}</div>}
 

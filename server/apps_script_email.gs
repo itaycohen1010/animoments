@@ -43,6 +43,7 @@ function doPost(e) {
     phone: esc(String(raw.phone || '').slice(0, 30)),
     package_name: esc(String(raw.package_name || '').slice(0, 60)),
     package_price: esc(String(raw.package_price || '').slice(0, 12)),
+    music_mood: esc(String(raw.music_mood || '').slice(0, 40)),
     photo_count: esc(String(raw.photo_count || '').slice(0, 6)),
     order_date: esc(String(raw.order_date || '').slice(0, 40))
   };
@@ -110,6 +111,7 @@ function doPost(e) {
     name: 'זכרונימציה',
     body: 'מספר הזמנה: ' + d.order_id + '\n' +
           'חבילה: ' + d.package_name + '\n' +
+          'תחושת מוזיקה: ' + (d.music_mood || '(לא נבחר)') + '\n' +
           'תמונות: ' + d.photo_count + '\n' +
           'מייל: ' + d.to_email + '\n' +
           'טלפון: ' + d.phone + '\n' +

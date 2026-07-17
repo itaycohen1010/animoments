@@ -64,11 +64,11 @@ export const config = {
   simulateFailure: false,
 
   packages: [
-    { key: 'small',  name: 'רגע קטן',        price: 99,  discount: 0, maxPhotos: 8,
+    { key: 'small',  name: 'רגע קטן',        price: 99,  discount: 10, maxPhotos: 8,
       features: ['עד 8 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] },
-    { key: 'full',   name: 'הסיפור המלא',    price: 179, discount: 0, maxPhotos: 15, featured: true,
+    { key: 'full',   name: 'הסיפור המלא',    price: 199, discount: 40, maxPhotos: 15, featured: true,
       features: ['עד 15 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] },
-    { key: 'legacy', name: 'מורשת משפחתית', price: 319, discount: 0, maxPhotos: 30,
+    { key: 'legacy', name: 'מורשת משפחתית', price: 299, discount: 15, maxPhotos: 30,
       features: ['עד 30 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] }
   ],
 
