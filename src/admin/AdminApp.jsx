@@ -214,7 +214,7 @@ function frameName(framesById, frameRef) {
   return f ? f.output_path.split('/').pop() : '';
 }
 
-function TransitionCard({ project, tr, framesById, clip, edited, onEdit, onRegenerate, busy }) {
+function TransitionCard({ project, tr, framesById, clip, edited, placeholder, onEdit, onRegenerate, busy }) {
   const startImg = frameName(framesById, tr.start_frame);
   const endImg = frameName(framesById, tr.end_frame);
   const clipFile = tr.output_path.split('/').pop();
@@ -227,6 +227,11 @@ function TransitionCard({ project, tr, framesById, clip, edited, onEdit, onRegen
         </span>
         <span style={{ color: C.muted, fontSize: 12 }}>{tr.duration}s</span>
         {edited && <span style={S.chip(C.accentSoft)}>edited</span>}
+        {placeholder && !edited && (
+          <span style={S.chip(C.err)} title="Planning failed for this pair; it still has the generic fallback prompt. Re-running Storyboard re-plans it.">
+            generic prompt
+          </span>
+        )}
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -267,6 +272,10 @@ function TransitionCard({ project, tr, framesById, clip, edited, onEdit, onRegen
   );
 }
 
+// Sentinel id in the `dirty` set for the storyboard-level global motion
+// prompt (transition ids never collide with it).
+const GLOBAL_EDIT = '__global_motion__';
+
 function ProjectDetail({ name, onBack, notify }) {
   const [snap, setSnap] = useState(null);
   const [storyboard, setStoryboard] = useState(null); // parsed, editable copy
@@ -289,6 +298,9 @@ function ProjectDetail({ name, onBack, notify }) {
             prev.transitions.filter((t) => dirtyRef.current.has(t.id)).map((t) => [t.id, t])
           );
           fresh.transitions = fresh.transitions.map((t) => editedById[t.id] || t);
+          if (dirtyRef.current.has(GLOBAL_EDIT)) {
+            fresh.global_motion_prompt = prev.global_motion_prompt;
+          }
           return fresh;
         });
       } catch { setStoryboard(null); }
@@ -313,6 +325,9 @@ function ProjectDetail({ name, onBack, notify }) {
 
   const framesById = Object.fromEntries((storyboard?.frames || []).map((f) => [f.id, f]));
   const clipsById = Object.fromEntries((snap.clips || []).map((c) => [c.id, c]));
+  // Transitions the backend planner never succeeded on (still carrying the
+  // config fallback prompt) — flagged so nobody renders a whole order generic.
+  const placeholderIds = new Set(snap.storyboard?.placeholder_transitions || []);
   const [stepText, stepColor] = stepChip(snap.next_step);
   const activeJob = (snap.jobs || []).find((j) => ['running', 'queued', 'cancelling'].includes(j.state));
 
@@ -342,6 +357,11 @@ function ProjectDetail({ name, onBack, notify }) {
       ...sb, transitions: sb.transitions.map((t) => (t.id === tr.id ? tr : t))
     }));
     setDirty((d) => new Set(d).add(tr.id));
+  };
+
+  const editGlobalMotion = (value) => {
+    setStoryboard((sb) => ({ ...sb, global_motion_prompt: value }));
+    setDirty((d) => new Set(d).add(GLOBAL_EDIT));
   };
 
   const regenerate = async (clipId) => {
@@ -446,14 +466,38 @@ function ProjectDetail({ name, onBack, notify }) {
             </h3>
             {dirty.size > 0 && (
               <Btn busy={busyAction === 'save'} onClick={saveEdits}>
-                Save {dirty.size} edited transition{dirty.size > 1 ? 's' : ''}
+                Save {dirty.size} edit{dirty.size > 1 ? 's' : ''}
               </Btn>
             )}
+          </div>
+          {placeholderIds.size > 0 && (
+            <div style={{ ...S.card, border: `1px solid ${C.err}88` }}>
+              <strong style={{ color: C.err }}>
+                {placeholderIds.size} of {storyboard.transitions.length} transitions still have
+                the generic fallback prompt
+              </strong>
+              <p style={{ color: C.muted, fontSize: 13, margin: '6px 0 0' }}>
+                Planning failed for them (OpenAI quota or rate limit) — run Storyboard again
+                to re-plan exactly these. Clips rendered from the generic prompt lose their
+                tailored motion.
+              </p>
+            </div>
+          )}
+          <div style={S.card}>
+            <label style={S.label}>
+              Global motion prompt — prepended to every clip (whole-movie facts, e.g.
+              “two separate people appear throughout; never blend them”; keep it to a
+              sentence or two)
+            </label>
+            <textarea style={{ ...S.input, minHeight: 44, resize: 'vertical' }}
+              placeholder="(none)" value={storyboard.global_motion_prompt || ''}
+              onChange={(e) => editGlobalMotion(e.target.value)} />
           </div>
           {storyboard.transitions.map((tr) => (
             <TransitionCard key={tr.id} project={name} tr={tr} framesById={framesById}
               clip={clipsById[tr.output_path.split('/').pop()?.replace(/\.mp4$/, '')]}
-              edited={dirty.has(tr.id)} onEdit={editTransition}
+              edited={dirty.has(tr.id)} placeholder={placeholderIds.has(tr.id)}
+              onEdit={editTransition}
               onRegenerate={regenerate} busy={busyAction === `render ${tr.id}`} />
           ))}
         </>
