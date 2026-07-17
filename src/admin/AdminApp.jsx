@@ -225,6 +225,12 @@ function TransitionCard({ project, tr, framesById, clip, edited, placeholder, on
         <span style={S.chip(clip?.rendered ? C.ok : C.accentSoft)}>
           {clip?.rendered ? (clip.sfx ? 'rendered · sfx' : 'rendered · silent') : 'not rendered'}
         </span>
+        {clip?.stale && (
+          <span style={S.chip('#E0A75B')}
+            title="The storyboard changed after this clip was rendered (re-planned motion). The clip is kept as-is — click regenerate when you want the new plan applied (spends credits).">
+            outdated
+          </span>
+        )}
         <span style={{ color: C.muted, fontSize: 12 }}>{tr.duration}s</span>
         {edited && <span style={S.chip(C.accentSoft)}>edited</span>}
         {placeholder && !edited && (
