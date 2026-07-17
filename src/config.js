@@ -12,7 +12,7 @@ export const config = {
   // Optional promo/coupon popup shown once when the page opens. Empty ('') = no popup.
   promoPopup: '',
   promoTextSize: 24, // popup text size in px (adjust to taste)
-  promoImage: 'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1784097150/Launch_Flyer_y1a88b.png', // optional image URL shown in the popup instead of text
+  promoImage: '', // optional image URL shown in the popup instead of text
 
   // Cloudinary (unsigned upload). Leave empty for demo mode (no real upload).
   cloudinary: {
@@ -75,11 +75,11 @@ export const config = {
   simulateFailure: false,
 
   packages: [
-    { key: 'small',  name: 'רגע קטן',        price: 99,  discount: 10, maxPhotos: 8,
+    { key: 'small',  name: 'רגע קטן',        price: 99,  discount: 0, maxPhotos: 8,
       features: ['עד 8 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] },
-    { key: 'full',   name: 'הסיפור המלא',    price: 199, discount: 40, maxPhotos: 15, featured: true,
+    { key: 'full',   name: 'הסיפור המלא',    price: 179, discount: 0, maxPhotos: 15, featured: true,
       features: ['עד 15 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] },
-    { key: 'legacy', name: 'מורשת משפחתית', price: 299, discount: 15, maxPhotos: 30,
+    { key: 'legacy', name: 'מזכרת לחיים', price: 319, discount: 0, maxPhotos: 30,
       features: ['עד 30 תמונות', 'מוזיקה מותאמת', 'מוכן תוך 48 שעות'] }
   ],
 
@@ -88,12 +88,12 @@ export const config = {
   // Filmstrip examples (photo url + title + optional video). Clicking a tile opens a
   // lightbox that plays `video` if set; otherwise shows a "coming soon" placeholder.
   examples: [
-    { img: 'https://picsum.photos/seed/noa-baby/440/280',    title: 'השנה הראשונה של נועה', video: '' },
-    { img: 'https://picsum.photos/seed/saba-savta/440/280',  title: '40 שנה לסבא וסבתא', video: '' },
-    { img: 'https://picsum.photos/seed/yam-trip/440/280',    title: 'הטיול המשפחתי לים', video: '' },
-    { img: 'https://picsum.photos/seed/birthday/440/280',    title: 'השנה הראשונה של נועה', video: '' },
-    { img: 'https://picsum.photos/seed/family-home/440/280', title: '40 שנה לסבא וסבתא', video: '' },
-    { img: 'https://picsum.photos/seed/picnic/440/280',      title: 'הטיול המשפחתי לים', video: '' }
+    { img: 'https://img.youtube.com/vi/y428SjEcUfQ/hqdefault.jpg', title: 'מתן מלידה ועד היום👨🏻‍🍳', video: 'https://youtu.be/y428SjEcUfQ' },
+    { img: 'https://img.youtube.com/vi/quPYuPS5gc0/hqdefault.jpg', title: 'יפתח בן שנתיים👶🏼', video: 'https://youtu.be/quPYuPS5gc0' },
+    { img: 'https://img.youtube.com/vi/jpHmvEfhz0Q/hqdefault.jpg', title: 'אור ונדב כובשים את אתונה', video: 'https://youtu.be/jpHmvEfhz0Q' },
+    { img: 'https://img.youtube.com/vi/w4SvOgTUvRw/hqdefault.jpg', title: 'באדי בת 4🐕', video: 'https://youtu.be/w4SvOgTUvRw' },
+    { img: 'https://img.youtube.com/vi/fSS030bRRw8/hqdefault.jpg', title: 'פומבי החמוד שלנו❤️', video: 'https://youtu.be/fSS030bRRw8' },
+    { img: 'https://img.youtube.com/vi/3mGPan8qRik/hqdefault.jpg', title: 'דרור וירון עושים את אמריקה 🇺🇸2026', video: 'https://youtu.be/3mGPan8qRik' }
   ],
 
   contactEmail: 'myanimoments@gmail.com',
