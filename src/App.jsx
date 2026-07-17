@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { config, colors as C } from './config.js';
 import { legalDocs } from './legal.js';
+import { saveOrder, getCustomerId, fetchSettings } from './firebase.js';
 
 import Nav from './components/Nav.jsx';
 import Footer from './components/Footer.jsx';
@@ -41,6 +42,28 @@ export default function App() {
   const [modal, setModal] = useState(null);          // 'how' | 'tips' | 'confirm' | 'blessing' | 'privacy' | 'accessibility' | 'terms'
   const [howStep, setHowStep] = useState(1);
   const [promoOpen, setPromoOpen] = useState(!!((config.promoPopup || '').trim() || (config.promoImage || '').trim()));
+  const [settingsTick, setSettingsTick] = useState(0); // bumps after DB settings load to re-render
+
+  // Load business settings from the DB (settings/site) and apply over config.js defaults.
+  // config.js stays as the instant fallback until this resolves.
+  useEffect(() => {
+    fetchSettings().then((s) => {
+      if (!s) return;
+      Object.assign(config, s);            // override any provided fields (packages, prices, announcement, promo, examples…)
+      if (Array.isArray(s.packages)) {
+        // DB stores raw packages (price = original, discount = %); re-apply the sale transform
+        config.packages = s.packages.map((p) => {
+          const d = Math.min(90, Math.max(0, p.discount || 0));
+          return { ...p, basePrice: p.price, price: Math.round(p.price * (100 - d) / 100) };
+        });
+      }
+      if (!config.packages.some((p) => p.key === pkgKey)) {
+        setPkgKey((config.packages.find((p) => p.key === config.defaultPackageKey) || config.packages[1] || config.packages[0]).key);
+      }
+      setPromoOpen(!!((config.promoPopup || '').trim() || (config.promoImage || '').trim()));
+      setSettingsTick((t) => t + 1);
+    });
+  }, []); // eslint-disable-line
 
   const tipsShownRef = useRef(false);
   const fileInputRef = useRef(null);
@@ -206,11 +229,29 @@ export default function App() {
     }).catch((err) => console.warn('confirmation email failed', err));
   };
 
+  // ---------- firestore ----------
+  const orderSavedRef = useRef(false);
+  const saveOrderOnce = () => {
+    if (orderSavedRef.current) return;
+    orderSavedRef.current = true;
+    const name = (form.name.trim() || 'ללא-שם').replace(/\s+/g, '-');
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const stamp = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
+    const folder = uploadFolderRef.current || `video-orders/${getOrderId()}_${name}-${stamp}${mood ? '_' + mood.replace(/\s+/g, '-') : ''}`;
+    saveOrder({
+      orderId: getOrderId(), name: form.name.trim(), phone: form.phone.trim(), email: form.email.trim(),
+      packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price,
+      photoCount: photos.length, mood, blessing, folder
+    });
+  };
+
   // ---------- upload (runs AFTER payment) ----------
   const startUpload = async () => {
     // Fire order emails the moment payment is confirmed — before upload — so a paid
     // order is never lost even if Cloudinary is down.
     sendConfirmationEmail();
+    saveOrderOnce();
     setStep(4); setResult('processing'); setUploadedCount(0);
     if (!cloudinaryConfigured) {
       // demo mode
@@ -314,6 +355,7 @@ export default function App() {
     detailsUploadedRef.current = false;
     orderIdRef.current = null;
     emailSentRef.current = false;
+    orderSavedRef.current = false;
     setStep(0); setPhotos([]); setForm({ name: '', phone: '', email: '', email2: '' });
     setCard({ name: '', num: '', exp: '', cvv: '' });
     setBlessing(''); setMood('');

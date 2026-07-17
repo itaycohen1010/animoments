@@ -20,6 +20,17 @@ export const config = {
     uploadPreset: 'videoOrders'  // must be UNSIGNED
   },
 
+  // Firebase / Firestore — stores each completed order (see src/firebase.js for setup).
+  // Paste your web-app config here. Leave projectId empty ('') to disable (orders just won't be saved).
+  firebase: {
+    apiKey: 'AIzaSyAKEuWRBWqV5p0MzzjUIcpkGfoIE7ttrdI',
+    authDomain: 'animoment-35bea.firebaseapp.com',
+    projectId: 'animoment-35bea',
+    storageBucket: 'animoment-35bea.firebasestorage.app',
+    messagingSenderId: '332052293635',
+    appId: '1:332052293635:web:d34b5da68d9916dec2c636'
+  },
+
   // Optional server endpoint that sends the confirmation email.
   // Leave empty to skip emails. (A static site cannot send email by itself —
   // point this at any small API you host: Express, Cloud Function, your Python backend, etc.
