@@ -38,8 +38,13 @@ function Btn({ ghost, busy, children, ...rest }) {
   );
 }
 
-function JobRow({ job, onShowLog }) {
-  const color = job.state === 'done' ? C.ok : job.state === 'failed' ? C.err : C.run;
+function JobRow({ job, onShowLog, onCancel, cancelBusy }) {
+  const color = job.state === 'done' ? C.ok
+    : job.state === 'failed' ? C.err
+      : job.state === 'cancelled' ? C.muted
+        : job.state === 'cancelling' ? C.accentSoft
+          : C.run;
+  const cancellable = job.state === 'queued' || job.state === 'running';
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
       <span style={S.chip(color)}>{job.state}</span>
@@ -48,6 +53,14 @@ function JobRow({ job, onShowLog }) {
         {(job.started_at || job.created_at || '').replace('T', ' ').slice(0, 19)}
       </span>
       {job.error && <span style={{ ...S.err, maxWidth: 380, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.error}</span>}
+      {(cancellable || job.state === 'cancelling') && (
+        <Btn ghost busy={cancelBusy} disabled={!cancellable}
+          style={{ color: C.err, borderColor: `${C.err}88` }}
+          title="Queued jobs stop now; running jobs finish the current item first. Re-running later resumes."
+          onClick={() => onCancel(job.id)}>
+          {job.state === 'cancelling' ? 'cancelling…' : 'cancel'}
+        </Btn>
+      )}
       <Btn ghost onClick={() => onShowLog(job.id)}>log</Btn>
     </div>
   );
@@ -290,7 +303,7 @@ function ProjectDetail({ name, onBack, notify }) {
 
   // Poll while a job is queued/running, refresh once when it settles.
   useEffect(() => {
-    const active = (snap?.jobs || []).some((j) => j.state === 'queued' || j.state === 'running');
+    const active = (snap?.jobs || []).some((j) => ['queued', 'running', 'cancelling'].includes(j.state));
     if (!active) return undefined;
     pollRef.current = setInterval(() => load().catch(() => {}), 3000);
     return () => clearInterval(pollRef.current);
@@ -301,7 +314,7 @@ function ProjectDetail({ name, onBack, notify }) {
   const framesById = Object.fromEntries((storyboard?.frames || []).map((f) => [f.id, f]));
   const clipsById = Object.fromEntries((snap.clips || []).map((c) => [c.id, c]));
   const [stepText, stepColor] = stepChip(snap.next_step);
-  const activeJob = (snap.jobs || []).find((j) => j.state === 'running' || j.state === 'queued');
+  const activeJob = (snap.jobs || []).find((j) => ['running', 'queued', 'cancelling'].includes(j.state));
 
   const run = async (command, options = {}, label = command) => {
     setBusyAction(label);
@@ -341,6 +354,18 @@ function ProjectDetail({ name, onBack, notify }) {
     catch (e) { notify(`Log failed: ${e.message}`); }
   };
 
+  const cancelJob = async (jobId) => {
+    setBusyAction(`cancel ${jobId}`);
+    try {
+      const res = await api.cancelJob(jobId);
+      notify(res.job.state === 'cancelling'
+        ? 'Cancelling — the clip being generated will finish, then the job stops.'
+        : 'Job cancelled.');
+      await load();
+    } catch (e) { notify(`Cancel failed: ${e.message}`); }
+    finally { setBusyAction(''); }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
@@ -349,7 +374,8 @@ function ProjectDetail({ name, onBack, notify }) {
         <span style={S.chip(stepColor)}>{stepText}</span>
         {snap.order?.customer && <span style={{ color: C.muted, fontSize: 13 }}>
           {snap.order.customer} · {snap.order.order_id}</span>}
-        {activeJob && <span style={S.chip(C.run)}>{activeJob.command} {activeJob.state}…</span>}
+        {activeJob && <span style={S.chip(activeJob.state === 'cancelling' ? C.accentSoft : C.run)}>
+          {activeJob.command} {activeJob.state}…</span>}
       </div>
 
       <div style={{ ...S.card, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -393,7 +419,10 @@ function ProjectDetail({ name, onBack, notify }) {
       {(snap.jobs || []).length > 0 && (
         <div style={S.card}>
           <strong>Jobs</strong>
-          {(snap.jobs || []).map((j) => <JobRow key={j.id} job={j} onShowLog={showLog} />)}
+          {(snap.jobs || []).map((j) => (
+            <JobRow key={j.id} job={j} onShowLog={showLog} onCancel={cancelJob}
+              cancelBusy={busyAction === `cancel ${j.id}`} />
+          ))}
         </div>
       )}
 

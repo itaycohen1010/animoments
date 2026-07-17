@@ -49,7 +49,8 @@ export const api = {
     }),
   jobs: (project) =>
     request(`/api/jobs${project ? `?project=${encodeURIComponent(project)}` : ''}`),
-  job: (id) => request(`/api/jobs/${id}`)
+  job: (id) => request(`/api/jobs/${id}`),
+  cancelJob: (id) => request(`/api/jobs/${id}/cancel`, { method: 'POST' })
 };
 
 // <img>/<video> tags can't send an Authorization header — the API accepts the
