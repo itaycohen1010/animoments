@@ -11,6 +11,8 @@ import DetailsScreen from './screens/DetailsScreen.jsx';
 import UploadScreen from './screens/UploadScreen.jsx';
 import PaymentScreen from './screens/PaymentScreen.jsx';
 import ResultScreen from './screens/ResultScreen.jsx';
+import LookupScreen from './screens/LookupScreen.jsx';
+import GalleryScreen from './screens/GalleryScreen.jsx';
 
 import LegalModal from './modals/LegalModal.jsx';
 import HowItWorksModal from './modals/HowItWorksModal.jsx';
@@ -41,6 +43,8 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);          // 'how' | 'tips' | 'confirm' | 'blessing' | 'privacy' | 'accessibility' | 'terms'
   const [howStep, setHowStep] = useState(1);
+  const [lookup, setLookup] = useState(false); // 'הסרטון שלי' retrieval screen
+  const [gallery, setGallery] = useState(false); // 'גלריה' screen
   const [promoOpen, setPromoOpen] = useState(!!((config.promoPopup || '').trim() || (config.promoImage || '').trim()));
   const [settingsTick, setSettingsTick] = useState(0); // bumps after DB settings load to re-render
 
@@ -370,13 +374,19 @@ export default function App() {
   return (
     <div className="app-shell">
       <Nav step={step} journeyPct={journeyPct} journeyLabel={journeyLabel}
-        onHome={() => setStep(0)} onStart={() => startOrder()} />
+        onHome={() => { setLookup(false); setGallery(false); setStep(0); window.scrollTo(0, 0); }} onStart={() => { setLookup(false); setGallery(false); startOrder(); window.scrollTo(0, 0); }}
+        onLookup={() => { setLookup(true); setGallery(false); setStep(0); }} lookup={lookup}
+        onGallery={() => { setGallery(true); setLookup(false); setStep(0); }} gallery={gallery}
+        onSection={(e, id) => { if (lookup || gallery) { e.preventDefault(); setLookup(false); setGallery(false); setStep(0); setTimeout(() => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 60); } }} />
 
-      {(config.announcement || '').trim() && (
+      {(config.announcement || '').trim() && !lookup && !gallery && (
         <div style={{ background: '#17120F', color: '#fff', textAlign: 'center', fontWeight: 800, fontSize: 15, padding: '11px 20px', direction: 'rtl' }}>{config.announcement}</div>
       )}
 
-      {step === 0 && <LandingScreen onStart={startOrder} onOpenHow={openHow} />}
+      {gallery && <GalleryScreen onHome={() => { setGallery(false); window.scrollTo(0, 0); }} />}
+      {lookup && <LookupScreen onHome={() => { setLookup(false); window.scrollTo(0, 0); }} />}
+
+      {!lookup && !gallery && step === 0 && <LandingScreen onStart={startOrder} onOpenHow={openHow} />}
 
       {step === 1 && (
         <UploadScreen pkg={pkg} pkgKey={pkgKey} setPkgKey={setPkgKey}
@@ -419,6 +429,7 @@ export default function App() {
       {promoOpen && ((config.promoPopup || '').trim() || (config.promoImage || '').trim()) && (
         <div onClick={() => setPromoOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(59,42,32,.55)', backdropFilter: 'blur(5px)', zIndex: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="מבצע" style={{ position: 'relative', background: '#fff', borderRadius: 24, maxWidth: 420, width: '100%', padding: '36px 28px 28px', textAlign: 'center', boxShadow: '0 24px 60px rgba(59,42,32,.3)', direction: 'rtl' }}>
+            <button onClick={() => setPromoOpen(false)} aria-label="סגירה" style={{ position: 'absolute', top: 12, left: 12, border: 'none', background: 'none', cursor: 'pointer', width: 34, height: 34, borderRadius: '50%', fontSize: 22, color: '#6E5240', fontFamily: "'Heebo', sans-serif", lineHeight: 1, zIndex: 2, textShadow: '0 1px 4px rgba(255,255,255,.6)' }}>×</button>
             {(config.promoImage || '').trim()
               ? <img src={config.promoImage} alt="מבצע" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: 14, margin: '6px 0 2px' }} />
               : <p style={{ color: '#4A3529', fontSize: (config.promoTextSize || 24), fontWeight: 800, lineHeight: 1.5, margin: '8px 0 4px', whiteSpace: 'pre-line', wordBreak: 'break-word' }}>{config.promoPopup}</p>}
