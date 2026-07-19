@@ -19,7 +19,19 @@
 import { config } from './config.js';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+
+let appCheckDone = false;
+function activateAppCheck(a) {
+  if (appCheckDone) return;
+  appCheckDone = true;
+  const key = (config.recaptchaSiteKey || '').trim();
+  if (!key) return;
+  try {
+    initializeAppCheck(a, { provider: new ReCaptchaV3Provider(key), isTokenAutoRefreshEnabled: true });
+  } catch (e) { console.warn('App Check init failed', e); }
+}
 
 let db = null;
 let auth = null;
@@ -36,6 +48,7 @@ function ready() {
   if (!c || !c.projectId) return false; // not configured → silently skip
   try {
     const a = app();
+    activateAppCheck(a);
     db = getFirestore(a);
     auth = getAuth(a);
     return true;
@@ -50,7 +63,9 @@ export function adminAuth() { ready(); return auth; }
 
 export function adminLogin(email, password) {
   if (!ready()) return Promise.reject(new Error('Firebase not configured'));
-  return signInWithEmailAndPassword(auth, email, password);
+  // Session persistence: the admin is signed out when the browser is fully closed.
+  return setPersistence(auth, browserSessionPersistence)
+    .then(() => signInWithEmailAndPassword(auth, email, password));
 }
 export function adminLogout() { return auth ? signOut(auth) : Promise.resolve(); }
 export function onAdminAuth(cb) { if (!ready()) { cb(null); return () => {}; } return onAuthStateChanged(auth, cb); }

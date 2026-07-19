@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { colors as C } from '../config.js';
 import { pillBtn, ghostBtn } from '../styles.js';
-import { findProducts, findProductsByCustomer } from '../firebase.js';
+import { findProducts } from '../firebase.js';
 
 // Force a video URL to download rather than preview. For Cloudinary, insert fl_attachment.
 function downloadUrl(url) {
@@ -12,24 +12,11 @@ function downloadUrl(url) {
   return url;
 }
 
-// "הסרטון שלי" — retrieve finished video(s). Auto-matches the returning customer by
-// their stored customerId (same browser); otherwise they type their order number.
+// "הסרטון שלי" — retrieve finished video(s) by order number.
 export default function LookupScreen({ onHome }) {
   const [value, setValue] = useState('');
   const [state, setState] = useState('idle'); // idle | searching | found | notfound
   const [products, setProducts] = useState([]);
-
-  // On open, try to auto-find this browser's customer video(s) (no typing needed).
-  useEffect(() => {
-    let cancelled = false;
-    setState('searching');
-    findProductsByCustomer().then((list) => {
-      if (cancelled) return;
-      if (list.length) { setProducts(list); setState('found'); }
-      else setState('idle');
-    });
-    return () => { cancelled = true; };
-  }, []);
 
   const search = async () => {
     if (!value.trim()) return;
@@ -45,7 +32,7 @@ export default function LookupScreen({ onHome }) {
         <div style={{ fontSize: 44, marginBottom: 10 }}>🎬</div>
         <h2 style={{ fontWeight: 800, fontSize: '1.6rem', margin: '0 0 8px' }}>הסרטון שלי</h2>
         <p style={{ color: C.body, fontSize: '.98rem', lineHeight: 1.7, margin: '0 0 22px' }}>
-          אם הזמנתם מהמכשיר הזה — הסרטון שלכם יופיע כאן אוטומטית. אחרת, הזינו את מספר ההזמנה שקיבלתם במייל.
+          הזינו את מספר ההזמנה שקיבלתם במייל, ונביא לכם קישור לצפייה והורדה של הסרטון.
         </p>
 
         <input

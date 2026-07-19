@@ -31,6 +31,11 @@ export const config = {
     appId: '1:332052293635:web:d34b5da68d9916dec2c636'
   },
 
+  // Firebase App Check (reCAPTCHA v3) — blocks use of your Firebase project from
+  // outside your own site. Paste the reCAPTCHA v3 SITE key here (see setup steps).
+  // Leave '' to disable App Check.
+  recaptchaSiteKey: '6Leq9FotAAAAAKVyY8DlL0hJ02ptZ1hVnZxewOJF',
+
   // Optional server endpoint that sends the confirmation email.
   // Leave empty to skip emails. (A static site cannot send email by itself —
   // point this at any small API you host: Express, Cloud Function, your Python backend, etc.
