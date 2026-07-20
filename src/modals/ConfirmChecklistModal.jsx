@@ -23,7 +23,7 @@ export default function ConfirmChecklistModal({ onConfirm, onClose }) {
         ))}
       </div>
       <div style={{ background: C.errorBg, border: `1.5px solid ${C.accent}`, borderRadius: 14, padding: '12px 16px', marginBottom: 20 }}>
-        <span style={{ color: C.accentDark, fontWeight: 700, fontSize: '.92rem', lineHeight: 1.7 }}>שימו לב: לא נוכל לתקן או להחזיר כסף על טעויות מסוג זה לאחר שליחת ההזמנה.</span>
+        <span style={{ color: C.accentDark, fontWeight: 700, fontSize: '.92rem', lineHeight: 1.7 }}>שימו לב: לא נוכל לתקן או לבטל הזמנה על טעויות מסוג זה לאחר שליחת ההזמנה.</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button onClick={onConfirm} style={{ ...pillBtn, width: '100%' }}>בדקתי הכול — אפשר להמשיך</button>

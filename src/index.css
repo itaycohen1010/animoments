@@ -34,6 +34,9 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 
 @media (max-width: 640px) {
   .nav-links { display: none !important; }
+  .nav-row { padding: 12px 14px !important; gap: 8px !important; }
+  .nav-pill { font-size: 14px !important; padding: 7px 8px !important; }
+  .nav-cta { font-size: 14px !important; padding: 9px 16px !important; }
   .section-pad { padding: 52px 18px 14px !important; }
   .featured-card { transform: none !important; }
   .featured-card:hover { transform: translateY(-4px) !important; }
@@ -43,7 +46,10 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
   .card-pad { padding: 26px 20px !important; }
 }
 @media (max-width: 480px) {
-  .nav-brand { font-size: 22px !important; }
+  .nav-brand { font-size: 18px !important; }
+  .nav-row { gap: 6px !important; padding: 12px 10px !important; }
+  .nav-pill { font-size: 13px !important; padding: 6px 6px !important; }
+  .nav-cta { font-size: 13px !important; padding: 8px 13px !important; }
   [role="dialog"] { max-height: 88vh !important; overflow-y: auto !important; padding: 24px 18px !important; }
   h1 { font-size: clamp(1.9rem, 8vw, 2.3rem) !important; }
 }

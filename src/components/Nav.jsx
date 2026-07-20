@@ -5,16 +5,16 @@ import { config, colors as C } from '../config.js';
 export default function Nav({ step, journeyPct, journeyLabel, onHome, onStart, onLookup, lookup, onGallery, gallery, onSection }) {
   return (
     <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(250,240,230,.88)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(196,80,46,.12)' }}>
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div className="nav-row" style={{ maxWidth: 1080, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
         <button onClick={onHome} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: C.ink, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="nav-brand" style={{ fontWeight: 900, fontSize: 26, letterSpacing: '-0.01em' }}>{config.brandName}</span>
         </button>
         <div style={{ flex: 1 }} />
         {(step === 0 || lookup || gallery) && (
-          <button onClick={onLookup} style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: lookup ? C.accent : C.body, padding: '8px 14px', borderRadius: 999 }}>הסרטון שלי</button>
+          <button className="nav-pill" onClick={onLookup} style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: lookup ? C.accent : C.body, padding: '8px 14px', borderRadius: 999 }}>הסרטון שלי</button>
         )}
         {(step === 0 || lookup || gallery) && (
-          <button onClick={onGallery} style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: gallery ? C.accent : C.body, padding: '8px 14px', borderRadius: 999 }}>גלריה</button>
+          <button className="nav-pill" onClick={onGallery} style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: gallery ? C.accent : C.body, padding: '8px 14px', borderRadius: 999 }}>גלריה</button>
         )}
         {step === 0 && (
           <>
@@ -23,7 +23,7 @@ export default function Nav({ step, journeyPct, journeyLabel, onHome, onStart, o
               <a href="#pricing" onClick={(e) => onSection(e, 'pricing')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>מחירים</a>
               <a href="#faq" onClick={(e) => onSection(e, 'faq')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>שאלות ותשובות</a>
             </div>
-            <button onClick={onStart} style={{ border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: '#fff', background: C.accent, padding: '10px 22px', borderRadius: 999, boxShadow: '0 6px 16px rgba(196,80,46,.28)' }}>מתחילים</button>
+            <button className="nav-cta" onClick={onStart} style={{ border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: '#fff', background: C.accent, padding: '10px 22px', borderRadius: 999, boxShadow: '0 6px 16px rgba(196,80,46,.28)', whiteSpace: 'nowrap' }}>מתחילים</button>
           </>
         )}
       </div>
