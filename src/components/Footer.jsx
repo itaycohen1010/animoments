@@ -18,6 +18,9 @@ export default function Footer({ onOpenLegal }) {
         <a href="https://youtube.com/channel/UCbTyD-2MgAvDgryDYWryE3A?si=px3Jg4At-NTm5wwY" target="_blank" rel="noopener" aria-label="יוטיוב" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: '#FF0000', boxShadow: '0 3px 10px rgba(180,100,70,.18)', color: '#fff' }}>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.5a3 3 0 0 0-2.1-2.1C19.5 3.9 12 3.9 12 3.9s-7.5 0-9.4.5A3 3 0 0 0 .5 6.5C0 8.4 0 12 0 12s0 3.6.5 5.5a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.5.5-5.5s0-3.6-.5-5.5zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
         </a>
+        <a href="https://www.tiktok.com/@animoment.il" target="_blank" rel="noopener" aria-label="טיקטוק" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: '#000', boxShadow: '0 3px 10px rgba(180,100,70,.18)', color: '#fff' }}>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 3h-2.9v13.2a2.4 2.4 0 1 1-2.4-2.4c.2 0 .4 0 .6.1v-3a5.4 5.4 0 1 0 4.7 5.3V8.8a6.6 6.6 0 0 0 3.9 1.3V7.1a3.6 3.6 0 0 1-3.9-4.1z"/></svg>
+        </a>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
         {[['privacy', 'מדיניות פרטיות'], ['accessibility', 'הצהרת נגישות'], ['terms', 'תנאי שימוש']].map(([key, label], i) => (
@@ -31,6 +34,7 @@ export default function Footer({ onOpenLegal }) {
         <span>מיוצר בישראל</span>
         <svg width="20" height="14" viewBox="0 0 32 22" aria-hidden="true" style={{ borderRadius: 2, boxShadow: '0 0 0 1px rgba(0,0,0,.06)' }}><rect width="32" height="22" fill="#fff"/><rect width="32" height="3.4" y="2.2" fill="#0038B8"/><rect width="32" height="3.4" y="16.4" fill="#0038B8"/><g fill="none" stroke="#0038B8" strokeWidth="1.1"><path d="M16 7.2l3.4 5.9h-6.8z"/><path d="M16 14.8l-3.4-5.9h6.8z"/></g></svg>
       </div>
+      <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>© כל הזכויות שמורות לזכרונימציה</div>
     </div>
   );
 }

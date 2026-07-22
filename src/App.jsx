@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { config, colors as C } from './config.js';
 import { legalDocs } from './legal.js';
-import { saveOrder, getCustomerId, fetchSettings } from './firebase.js';
+import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, markConverted, markGalleryView, trackHeartbeat } from './firebase.js';
 
 import Nav from './components/Nav.jsx';
 import Footer from './components/Footer.jsx';
@@ -32,7 +32,7 @@ export default function App() {
   const [photos, setPhotos] = useState([]);          // {id, url, file}
   const [dragIndex, setDragIndex] = useState(null);
   const [dzOver, setDzOver] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', email: '', email2: '' });
+  const [form, setForm] = useState({ name: '', phone: '', email: '', email2: '', agree: false });
   const [formError, setFormError] = useState(null);
   const [card, setCard] = useState({ name: '', num: '', exp: '', cvv: '' });
   const [blessing, setBlessing] = useState('');
@@ -68,6 +68,18 @@ export default function App() {
       setSettingsTick((t) => t + 1);
     });
   }, []); // eslint-disable-line
+
+  // analytics: start a session on first load, and record every step change for the funnel
+  useEffect(() => { startSession(); }, []);
+  useEffect(() => { trackStep(step); }, [step]);
+  // heartbeat: update time-on-site periodically and when the tab is hidden/closed
+  useEffect(() => {
+    const hb = setInterval(trackHeartbeat, 30000);
+    const onHide = () => { if (document.visibilityState === 'hidden') trackHeartbeat(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', trackHeartbeat);
+    return () => { clearInterval(hb); document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', trackHeartbeat); };
+  }, []);
 
   const tipsShownRef = useRef(false);
   const fileInputRef = useRef(null);
@@ -179,7 +191,8 @@ export default function App() {
     const phoneOk = /^0(5\d|[2-46-9])\d{7,8}$/.test(phoneRaw.replace(/[\s-]/g, '')) || (phoneRaw.startsWith('+') && phoneDigits >= 8 && phoneDigits <= 15);
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
     const email2Ok = form.email.trim() === (form.email2 || '').trim() && (form.email2 || '').trim().length > 0;
-    if (nameOk && phoneOk && emailOk && email2Ok) return null;
+    if (nameOk && phoneOk && emailOk && email2Ok && form.agree) return null;
+    if (nameOk && phoneOk && emailOk && email2Ok && !form.agree) return 'יש לאשר את תנאי השימוש ומדיניות הפרטיות';
     const missing = [];
     if (!nameOk) missing.push('שם');
     if (!phoneOk) missing.push('מספר טלפון תקין');
@@ -201,6 +214,7 @@ export default function App() {
   const detailsToPhotos = () => {
     const err = validateDetails();
     if (err) { setFormError(err); return; }
+    trackLead({ name: form.name, phone: form.phone, email: form.email });
     setStep(3); // details → payment
   };
 
@@ -256,6 +270,7 @@ export default function App() {
     // order is never lost even if Cloudinary is down.
     sendConfirmationEmail();
     saveOrderOnce();
+    markConverted(orderIdRef.current);
     setStep(4); setResult('processing'); setUploadedCount(0);
     if (!cloudinaryConfigured) {
       // demo mode
@@ -360,7 +375,7 @@ export default function App() {
     orderIdRef.current = null;
     emailSentRef.current = false;
     orderSavedRef.current = false;
-    setStep(0); setPhotos([]); setForm({ name: '', phone: '', email: '', email2: '' });
+    setStep(0); setPhotos([]); setForm({ name: '', phone: '', email: '', email2: '', agree: false });
     setCard({ name: '', num: '', exp: '', cvv: '' });
     setBlessing(''); setMood('');
     setFormError(null); setPayError(null); setResult('processing'); setUploadedCount(0);
@@ -376,7 +391,7 @@ export default function App() {
       <Nav step={step} journeyPct={journeyPct} journeyLabel={journeyLabel}
         onHome={() => { setLookup(false); setGallery(false); setStep(0); window.scrollTo(0, 0); }} onStart={() => { setLookup(false); setGallery(false); startOrder(); window.scrollTo(0, 0); }}
         onLookup={() => { setLookup(true); setGallery(false); setStep(0); }} lookup={lookup}
-        onGallery={() => { setGallery(true); setLookup(false); setStep(0); }} gallery={gallery}
+        onGallery={() => { setGallery(true); setLookup(false); setStep(0); markGalleryView(); }} gallery={gallery}
         onSection={(e, id) => { if (lookup || gallery) { e.preventDefault(); setLookup(false); setGallery(false); setStep(0); setTimeout(() => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 60); } }} />
 
       {(config.announcement || '').trim() && !lookup && !gallery && (
@@ -403,6 +418,7 @@ export default function App() {
       {step === 2 && (
         <DetailsScreen pkg={pkg} form={form} reportPaidPrice={(v) => { paidPriceRef.current = v; }} setForm={setForm}
           formError={formError} setFormError={setFormError}
+          onOpenLegal={(k) => setModal(k)}
           onBack={() => setStep(1)} onContinue={detailsToPhotos} onOpenHow={openHow} />
       )}
 

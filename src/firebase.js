@@ -240,3 +240,89 @@ export async function saveOrder(order) {
     console.warn('saveOrder failed', e);
   }
 }
+
+// ---------- analytics / session tracking ----------
+// One doc per browser tab-session in `sessions`. Updated in place as the visitor
+// moves through the funnel, so the admin can see visits, drop-off, and abandoned
+// leads (details filled but no payment). Never throws — analytics must not break UX.
+let _sid = null;
+let _maxStep = 0;
+function sessionId() {
+  if (_sid) return _sid;
+  try {
+    _sid = sessionStorage.getItem('zkm_sid');
+    if (!_sid) { _sid = 'S-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); sessionStorage.setItem('zkm_sid', _sid); }
+  } catch (e) { _sid = 'S-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  return _sid;
+}
+function sessionRef() { return doc(collection(db, 'sessions'), sessionId()); }
+
+export async function startSession() {
+  if (!ready()) return;
+  try {
+    let isNew = false;
+    try { isNew = !sessionStorage.getItem('zkm_sid_started'); sessionStorage.setItem('zkm_sid_started', '1'); } catch (e) { isNew = true; }
+    if (!isNew) return;
+    await setDoc(sessionRef(), {
+      sessionId: sessionId(),
+      customerId: getCustomerId(),
+      startedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      maxStep: 0, lastStep: 0,
+      referrer: (document.referrer || '').slice(0, 300),
+      landingPath: (location.pathname + location.search).slice(0, 200),
+      device: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+      converted: false, reachedDetails: false
+    }, { merge: true });
+  } catch (e) { console.warn('startSession failed', e); }
+}
+
+export async function trackStep(step) {
+  if (!ready()) return;
+  try {
+    _maxStep = Math.max(_maxStep, step);
+    await setDoc(sessionRef(), { lastStep: step, maxStep: _maxStep, updatedAt: serverTimestamp() }, { merge: true });
+  } catch (e) { /* silent */ }
+}
+
+// Called when the visitor fills their contact details (potential lead).
+export async function trackLead(info) {
+  if (!ready()) return;
+  try {
+    await setDoc(sessionRef(), {
+      reachedDetails: true,
+      name: (info.name || '').slice(0, 80),
+      phone: (info.phone || '').slice(0, 40),
+      email: (info.email || '').slice(0, 120),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (e) { /* silent */ }
+}
+
+export async function markConverted(orderId) {
+  if (!ready()) return;
+  try {
+    await setDoc(sessionRef(), { converted: true, orderId: orderId || '', convertedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+  } catch (e) { /* silent */ }
+}
+
+// Mark that this session viewed the gallery.
+export async function markGalleryView() {
+  if (!ready()) return;
+  try { await setDoc(sessionRef(), { viewedGallery: true, updatedAt: serverTimestamp() }, { merge: true }); } catch (e) { /* silent */ }
+}
+
+// Heartbeat: record last-active time so we can measure time on site.
+export async function trackHeartbeat() {
+  if (!ready()) return;
+  try { await setDoc(sessionRef(), { endedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }); } catch (e) { /* silent */ }
+}
+
+// Admin: list recent sessions for the monitoring page.
+export async function listSessions(max = 500) {
+  if (!ready()) return [];
+  try {
+    const snap = await getDocs(query(collection(db, 'sessions'), orderBy('startedAt', 'desc'), limit(max)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (e) { console.warn('listSessions failed', e); return []; }
+}

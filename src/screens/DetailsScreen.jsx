@@ -3,7 +3,7 @@ import { colors as C } from '../config.js';
 import { pillBtn, ghostBtn, smallGhostBtn, inputStyle } from '../styles.js';
 
 // Screen 1 — customer details (name / phone / email). First step of the order flow.
-export default function DetailsScreen({ pkg, form, setForm, formError, setFormError, onBack, onContinue, onOpenHow }) {
+export default function DetailsScreen({ pkg, form, setForm, formError, setFormError, onBack, onContinue, onOpenHow, onOpenLegal }) {
   const nameInvalid = !!formError && form.name.trim().length === 0;
   const phoneRaw = form.phone.trim();
   const phoneDigits = (form.phone.match(/\d/g) || []).length;
@@ -11,6 +11,7 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
   const phoneInvalid = !!formError && !phoneOk;
   const emailInvalid = !!formError && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
   const email2Invalid = !!formError && ((form.email2 || '').trim() !== form.email.trim() || !(form.email2 || '').trim());
+  const agreeInvalid = !!formError && !form.agree;
 
   const field = (label, key, type, placeholder, invalid, noPaste) => (
     <div>
@@ -41,8 +42,12 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
           {field('כתובת אימייל *', 'email', 'email', 'ruti@gmail.com', emailInvalid)}
           {field('אימות כתובת אימייל *', 'email2', 'email', 'הקלידו שוב את האימייל', email2Invalid, true)}
         </div>
-        {formError && <div style={{ textAlign: 'center', color: C.accentDark, fontWeight: 700, fontSize: '.95rem', margin: '10px 0 0' }}>{formError}</div>}
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 16, cursor: 'pointer', padding: agreeInvalid ? '10px 12px' : 0, background: agreeInvalid ? '#FBE4D7' : 'transparent', borderRadius: 12 }}>
+          <input type="checkbox" checked={!!form.agree} onChange={(e) => { setForm({ ...form, agree: e.target.checked }); setFormError(null); }} style={{ width: 20, height: 20, marginTop: 1, accentColor: C.accent, flexShrink: 0, cursor: 'pointer' }} />
+          <span style={{ fontSize: '.92rem', color: C.body, lineHeight: 1.6 }}>אני מאשר/ת את <a onClick={(e) => { e.preventDefault(); onOpenLegal && onOpenLegal('terms'); }} href="#" style={{ color: C.accent, fontWeight: 700 }}>תנאי השימוש</a> ו<a onClick={(e) => { e.preventDefault(); onOpenLegal && onOpenLegal('privacy'); }} href="#" style={{ color: C.accent, fontWeight: 700 }}>מדיניות הפרטיות</a> של אתר זה</span>
+        </label>
 
+        {formError && <div style={{ textAlign: 'center', color: C.accentDark, fontWeight: 700, fontSize: '.95rem', margin: '14px 0 0' }}>{formError}</div>}
         <div className="actions-row" style={{ display: 'flex', gap: 12, justifyContent: 'space-between', marginTop: 26, flexWrap: 'wrap' }}>
           <button onClick={onBack} style={ghostBtn}>חזרה</button>
           <button onClick={onContinue} style={pillBtn}>המשך לתשלום</button>

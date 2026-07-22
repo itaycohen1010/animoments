@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { config } from '../config.js';
-import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem } from '../firebase.js';
+import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, listSessions } from '../firebase.js';
 
 const C = config.colors || {};
 const ACCENT = '#C4502E', INK = '#3B2A20', BODY = '#6E5240', CARD = '#fff', BG = '#FAF0E6', BORDER = '#F0D9C4';
@@ -245,6 +245,259 @@ function GalleryEditor() {
   );
 }
 
+function MonitoringPanel() {
+  const [sessions, setSessions] = useState(null);
+  const [days, setDays] = useState(7);
+  const [tab, setTab] = useState('funnel'); // funnel | leads
+
+  const load = () => { setSessions(null); listSessions(1000).then(setSessions); };
+  useEffect(() => { load(); }, []);
+
+  const stepLabels = ['כניסה לאתר', 'בחירת תמונות', 'מילוי פרטים', 'תשלום', 'סיום ✓'];
+  const cutoff = Date.now() - days * 86400000;
+  const toMs = (t) => (t && t.seconds ? t.seconds * 1000 : (t && t.toMillis ? t.toMillis() : 0));
+  const rows = (sessions || []).filter((s) => { const t = toMs(s.startedAt); return !t || t >= cutoff; });
+
+  const total = rows.length;
+  const reached = (n) => rows.filter((s) => (s.maxStep || 0) >= n).length;
+  const converted = rows.filter((s) => s.converted).length;
+  const leads = rows.filter((s) => s.reachedDetails && !s.converted);
+  const convRate = total ? Math.round((converted / total) * 100) : 0;
+
+  // drop-off = where each session's furthest step landed
+  const leftAt = {};
+  rows.forEach((s) => { const m = s.converted ? 4 : (s.maxStep || 0); leftAt[m] = (leftAt[m] || 0) + 1; });
+
+  // visits by hour of day (0–23)
+  const byHour = Array(24).fill(0);
+  rows.forEach((s) => { const t = toMs(s.startedAt); if (t) byHour[new Date(t).getHours()]++; });
+  const hourMax = Math.max(1, ...byHour);
+  // device split
+  const mobileCount = rows.filter((s) => s.device === 'mobile').length;
+  const desktopCount = total - mobileCount;
+
+  // today
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+  const todayMs = startOfToday.getTime();
+  const todayVisits = rows.filter((s) => toMs(s.startedAt) >= todayMs).length;
+  const todayOrders = rows.filter((s) => s.converted && toMs(s.convertedAt || s.startedAt) >= todayMs).length;
+
+  // daily trend (within window)
+  const dayKey = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const dayMap = {};
+  rows.forEach((s) => { const t = toMs(s.startedAt); if (!t) return; const k = dayKey(t); if (!dayMap[k]) dayMap[k] = { v: 0, o: 0 }; dayMap[k].v++; if (s.converted) dayMap[k].o++; });
+  const dailyDays = Math.min(days, 30);
+  const daily = [];
+  for (let i = dailyDays - 1; i >= 0; i--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i); const k = dayKey(d.getTime()); daily.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, ...(dayMap[k] || { v: 0, o: 0 }) }); }
+  const dailyMax = Math.max(1, ...daily.map((x) => x.v));
+
+  // day of week (0=Sun)
+  const dowNames = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+  const byDow = Array(7).fill(0);
+  rows.forEach((s) => { const t = toMs(s.startedAt); if (t) byDow[new Date(t).getDay()]++; });
+  const dowMax = Math.max(1, ...byDow);
+
+  // traffic sources (from referrer)
+  const sourceOf = (ref) => {
+    if (!ref) return 'ישיר';
+    try { const h = new URL(ref).hostname.replace('www.', ''); if (/instagram/.test(h)) return 'אינסטגרם'; if (/tiktok/.test(h)) return 'טיקטוק'; if (/facebook|fb\./.test(h)) return 'פייסבוק'; if (/youtube|youtu\.be/.test(h)) return 'יוטיוב'; if (/google/.test(h)) return 'גוגל'; if (/animoment/.test(h)) return 'ישיר'; return h; } catch (e) { return 'אחר'; }
+  };
+  const srcMap = {};
+  rows.forEach((s) => { const k = sourceOf(s.referrer); srcMap[k] = (srcMap[k] || 0) + 1; });
+  const sources = Object.entries(srcMap).sort((a, b) => b[1] - a[1]);
+
+  // avg time to complete (converted sessions)
+  const durations = rows.filter((s) => s.converted && toMs(s.convertedAt) && toMs(s.startedAt)).map((s) => toMs(s.convertedAt) - toMs(s.startedAt));
+  const avgMin = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length / 60000) : 0;
+
+  // avg time on site (endedAt/updatedAt − startedAt across all sessions)
+  const onSite = rows.map((s) => { const end = toMs(s.endedAt) || toMs(s.updatedAt); const st = toMs(s.startedAt); return (end && st && end > st) ? end - st : 0; }).filter((d) => d > 0);
+  const avgOnSiteSec = onSite.length ? Math.round(onSite.reduce((a, b) => a + b, 0) / onSite.length / 1000) : 0;
+  const fmtDur = (sec) => sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} דק׳` : `${sec} שנ׳`;
+  // gallery visits
+  const galleryVisits = rows.filter((s) => s.viewedGallery).length;
+
+  const exportLeadsCsv = () => {
+    const head = ['שם', 'טלפון', 'אימייל', 'הגיע עד', 'מכשיר', 'מקור', 'תאריך'];
+    const lines = leads.map((s) => [s.name || '', s.phone || '', s.email || '', stepLabels[s.maxStep || 0], s.device === 'mobile' ? 'נייד' : 'מחשב', sourceOf(s.referrer), toMs(s.startedAt) ? new Date(toMs(s.startedAt)).toLocaleString('he-IL') : ''].map((x) => `"${String(x).replace(/"/g, '""')}"`).join(','));
+    const csv = '\uFEFF' + [head.join(','), ...lines].join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `leads-${dayKey(Date.now())}.csv`; a.click();
+  };
+
+  const card = { background: CARD, borderRadius: 16, padding: '18px 20px', boxShadow: '0 14px 40px rgba(180,100,70,.12)' };
+  const statNum = { fontSize: '2rem', fontWeight: 900, color: ACCENT };
+  const statLbl = { fontSize: 13, color: BODY, fontWeight: 700 };
+  const th = { padding: '10px 12px', fontSize: 12, color: BODY, textAlign: 'right', fontWeight: 800, borderBottom: `2px solid ${BORDER}`, whiteSpace: 'nowrap' };
+  const td = { padding: '10px 12px', fontSize: 13, color: INK, borderBottom: `1px solid ${BORDER}`, whiteSpace: 'nowrap' };
+
+  if (sessions === null) return <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>טוען…</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <select value={days} onChange={(e) => setDays(Number(e.target.value))} style={{ fontFamily: "'Heebo', sans-serif", fontSize: 14, padding: '8px 12px', borderRadius: 10, border: `1px solid ${BORDER}` }}>
+          <option value={1}>24 שעות</option>
+          <option value={7}>7 ימים</option>
+          <option value={30}>30 יום</option>
+          <option value={3650}>הכול</option>
+        </select>
+        <button onClick={load} style={{ border: `1.5px solid ${ACCENT}`, background: '#fff', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: ACCENT, padding: '8px 16px', borderRadius: 999 }}>רענון</button>
+      </div>
+
+      {/* summary stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
+        <div style={card}><div style={statNum}>{total}</div><div style={statLbl}>כניסות לאתר</div></div>
+        <div style={card}><div style={statNum}>{reached(1)}</div><div style={statLbl}>התחילו הזמנה</div></div>
+        <div style={card}><div style={statNum}>{leads.length}</div><div style={statLbl}>השאירו פרטים ולא שילמו</div></div>
+        <div style={card}><div style={statNum}>{converted}</div><div style={statLbl}>הזמנות שהושלמו</div></div>
+        <div style={card}><div style={statNum}>{convRate}%</div><div style={statLbl}>אחוז המרה</div></div>
+        <div style={card}><div style={statNum}>{todayVisits}</div><div style={statLbl}>כניסות היום</div></div>
+        <div style={card}><div style={statNum}>{todayOrders}</div><div style={statLbl}>הזמנות היום</div></div>
+        <div style={card}><div style={statNum}>{avgMin}′</div><div style={statLbl}>זמן ממוצע להזמנה</div></div>
+        <div style={card}><div style={statNum}>{fmtDur(avgOnSiteSec)}</div><div style={statLbl}>זמן שהייה ממוצע באתר</div></div>
+        <div style={card}><div style={statNum}>{galleryVisits}</div><div style={statLbl}>צפו בגלריה</div></div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, background: '#F3E7D8', borderRadius: 999, padding: 4, width: 'fit-content' }}>
+        <button onClick={() => setTab('funnel')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'funnel' ? '#fff' : BODY, background: tab === 'funnel' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>משפך המרה</button>
+        <button onClick={() => setTab('leads')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'leads' ? '#fff' : BODY, background: tab === 'leads' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>לידים ({leads.length})</button>
+        <button onClick={() => setTab('hours')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'hours' ? '#fff' : BODY, background: tab === 'hours' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>שעות ומכשירים</button>
+        <button onClick={() => setTab('trends')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'trends' ? '#fff' : BODY, background: tab === 'trends' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>מגמות ומקורות</button>
+      </div>
+
+      {tab === 'funnel' ? (
+        <div style={card}>
+          <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>משפך — היכן המבקרים עוזבים</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[0, 1, 2, 3, 4].map((n) => {
+              const dropped = n === 4 ? converted : (leftAt[n] || 0);
+              const pct = total ? Math.round((dropped / total) * 100) : 0;
+              return (
+                <div key={n}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                    <span style={{ color: INK, fontWeight: 700 }}>{n + 1}. {stepLabels[n]}</span>
+                    <span style={{ color: BODY }}>{n === 4 ? `הושלמו: ${dropped}` : `עזבו כאן: ${dropped}`} ({pct}%)</span>
+                  </div>
+                  <div style={{ height: 12, background: '#F3E7D8', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: pct + '%', background: `linear-gradient(90deg, ${ACCENT}, #D96A38)`, borderRadius: 999 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : tab === 'leads' ? (
+        <div style={{ ...card, overflow: 'auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <button onClick={exportLeadsCsv} disabled={!leads.length} style={{ border: `1.5px solid ${ACCENT}`, background: '#fff', cursor: leads.length ? 'pointer' : 'not-allowed', opacity: leads.length ? 1 : .5, fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 13, color: ACCENT, padding: '7px 14px', borderRadius: 999 }}>ייצוא ל-CSV</button>
+          </div>
+          {leads.length === 0 ? (
+            <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>אין לידים נטושים בטווח הזמן שנבחר.</div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+              <thead><tr>
+                <th style={th}>שם</th><th style={th}>טלפון</th><th style={th}>אימייל</th><th style={th}>הגיע עד</th><th style={th}>מכשיר</th><th style={th}>תאריך</th>
+              </tr></thead>
+              <tbody>
+                {leads.map((s) => (
+                  <tr key={s.id}>
+                    <td style={td}>{s.name || '—'}</td>
+                    <td style={td} dir="ltr">{s.phone || '—'}</td>
+                    <td style={td} dir="ltr">{s.email || '—'}</td>
+                    <td style={td}>{stepLabels[s.maxStep || 0]}</td>
+                    <td style={td}>{s.device === 'mobile' ? 'נייד' : 'מחשב'}</td>
+                    <td style={td}>{toMs(s.startedAt) ? new Date(toMs(s.startedAt)).toLocaleString('he-IL') : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : tab === 'hours' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={card}>
+            <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>כניסות לפי שעה ביום</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 160 }}>
+              {byHour.map((v, h) => (
+                <div key={h} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ fontSize: 10, color: BODY }}>{v || ''}</div>
+                  <div title={`${h}:00 — ${v} כניסות`} style={{ width: '100%', height: Math.round((v / hourMax) * 120) + 'px', minHeight: v ? 3 : 0, background: `linear-gradient(180deg, ${ACCENT}, #D96A38)`, borderRadius: '4px 4px 0 0' }} />
+                  <div style={{ fontSize: 9, color: BODY }}>{h}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ textAlign: 'center', fontSize: 12, color: BODY, marginTop: 8 }}>שעה ביום (0–23)</div>
+          </div>
+          <div style={card}>
+            <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>סוג מכשיר</div>
+            {[['נייד', mobileCount], ['מחשב', desktopCount]].map(([lbl, c]) => {
+              const pct = total ? Math.round((c / total) * 100) : 0;
+              return (
+                <div key={lbl} style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                    <span style={{ color: INK, fontWeight: 700 }}>{lbl}</span>
+                    <span style={{ color: BODY }}>{c} ({pct}%)</span>
+                  </div>
+                  <div style={{ height: 12, background: '#F3E7D8', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: pct + '%', background: `linear-gradient(90deg, ${ACCENT}, #D96A38)`, borderRadius: 999 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={card}>
+            <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>כניסות לפי יום</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 160 }}>
+              {daily.map((d, i) => (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ fontSize: 10, color: BODY }}>{d.v || ''}</div>
+                  <div title={`${d.label}: ${d.v} כניסות, ${d.o} הזמנות`} style={{ width: '100%', height: Math.round((d.v / dailyMax) * 120) + 'px', minHeight: d.v ? 3 : 0, background: `linear-gradient(180deg, ${ACCENT}, #D96A38)`, borderRadius: '4px 4px 0 0', position: 'relative' }}>
+                    {d.o > 0 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: Math.round((d.o / dailyMax) * 120) + 'px', background: '#3E6B33', borderRadius: '0 0 4px 4px' }} />}
+                  </div>
+                  <div style={{ fontSize: 8, color: BODY, transform: 'rotate(-45deg)', whiteSpace: 'nowrap', height: 14 }}>{d.label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ textAlign: 'center', fontSize: 12, color: BODY, marginTop: 10 }}><span style={{ color: ACCENT }}>■</span> כניסות &nbsp; <span style={{ color: '#3E6B33' }}>■</span> הזמנות</div>
+          </div>
+          <div style={card}>
+            <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>מקורות תנועה</div>
+            {sources.length === 0 ? <div style={{ color: BODY }}>אין נתונים.</div> : sources.map(([name, c]) => {
+              const pct = total ? Math.round((c / total) * 100) : 0;
+              return (
+                <div key={name} style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                    <span style={{ color: INK, fontWeight: 700 }}>{name}</span>
+                    <span style={{ color: BODY }}>{c} ({pct}%)</span>
+                  </div>
+                  <div style={{ height: 12, background: '#F3E7D8', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: pct + '%', background: `linear-gradient(90deg, ${ACCENT}, #D96A38)`, borderRadius: 999 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={card}>
+            <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>כניסות לפי יום בשבוע</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 130 }}>
+              {byDow.map((v, i) => (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ fontSize: 11, color: BODY }}>{v || ''}</div>
+                  <div style={{ width: '100%', height: Math.round((v / dowMax) * 90) + 'px', minHeight: v ? 3 : 0, background: `linear-gradient(180deg, ${ACCENT}, #D96A38)`, borderRadius: '4px 4px 0 0' }} />
+                  <div style={{ fontSize: 12, color: BODY, fontWeight: 700 }}>{dowNames[i]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Dashboard() {
   const [tab, setTab] = useState('orders'); // orders | settings
   const [orders, setOrders] = useState(null);
@@ -270,6 +523,7 @@ function Dashboard() {
             <button onClick={() => setTab('orders')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'orders' ? '#fff' : BODY, background: tab === 'orders' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>הזמנות</button>
             <button onClick={() => setTab('settings')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'settings' ? '#fff' : BODY, background: tab === 'settings' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>הגדרות האתר</button>
             <button onClick={() => setTab('gallery')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'gallery' ? '#fff' : BODY, background: tab === 'gallery' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>גלריה</button>
+            <button onClick={() => setTab('monitoring')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'monitoring' ? '#fff' : BODY, background: tab === 'monitoring' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>מעקב</button>
           </div>
           <div style={{ flex: 1 }} />
           {tab === 'orders' && <select value={filter} onChange={(e) => setFilter(e.target.value)} style={{ fontFamily: "'Heebo', sans-serif", fontSize: 14, padding: '8px 12px', borderRadius: 10, border: `1px solid ${BORDER}` }}>
@@ -280,7 +534,7 @@ function Dashboard() {
           <button onClick={() => adminLogout()} style={{ border: 'none', background: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: BODY }}>יציאה</button>
         </div>
 
-        {tab === 'settings' ? <SettingsEditor /> : tab === 'gallery' ? <GalleryEditor /> : (
+        {tab === 'settings' ? <SettingsEditor /> : tab === 'gallery' ? <GalleryEditor /> : tab === 'monitoring' ? <MonitoringPanel /> : (
           orders === null ? (
             <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>טוען…</div>
           ) : shown.length === 0 ? (
