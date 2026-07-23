@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { config, colors as C } from './config.js';
 import { legalDocs } from './legal.js';
-import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, markConverted, markGalleryView, trackHeartbeat } from './firebase.js';
+import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, markConverted, markGalleryView, trackHeartbeat, trackClick } from './firebase.js';
 
 import Nav from './components/Nav.jsx';
 import Footer from './components/Footer.jsx';
@@ -72,13 +72,26 @@ export default function App() {
   // analytics: start a session on first load, and record every step change for the funnel
   useEffect(() => { startSession(); }, []);
   useEffect(() => { trackStep(step); }, [step]);
-  // heartbeat: update time-on-site periodically and when the tab is hidden/closed
+  // clicks + idle session: count every on-site click and stop tracking after 5 min
+  // with no clicks (so time-on-site reflects real interaction, not tabs left open).
   useEffect(() => {
-    const hb = setInterval(trackHeartbeat, 30000);
+    let idleTimer = null;
+    let active = true;
+    const IDLE_MS = 5 * 60000;
+    const onClick = (e) => {
+      if (!active) { active = true; } // click after idle re-activates
+      const el = e.target && e.target.closest && e.target.closest('a,button,[data-track]');
+      const name = el ? (el.getAttribute('data-track') || (el.textContent || '').trim().slice(0, 30) || el.tagName.toLowerCase()) : null;
+      trackClick(name);
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => { active = false; }, IDLE_MS);
+    };
+    document.addEventListener('click', onClick, true);
+    idleTimer = setTimeout(() => { active = false; }, IDLE_MS);
     const onHide = () => { if (document.visibilityState === 'hidden') trackHeartbeat(); };
     document.addEventListener('visibilitychange', onHide);
     window.addEventListener('pagehide', trackHeartbeat);
-    return () => { clearInterval(hb); document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', trackHeartbeat); };
+    return () => { document.removeEventListener('click', onClick, true); clearTimeout(idleTimer); document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', trackHeartbeat); };
   }, []);
 
   const tipsShownRef = useRef(false);

@@ -316,6 +316,22 @@ function MonitoringPanel() {
   const fmtDur = (sec) => sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} דק׳` : `${sec} שנ׳`;
   // gallery visits
   const galleryVisits = rows.filter((s) => s.viewedGallery).length;
+  // total on-site clicks + avg per session
+  const totalClicks = rows.reduce((a, s) => a + (s.clicks || 0), 0);
+  const avgClicks = total ? (totalClicks / total).toFixed(1) : 0;
+
+  // where users clicked — aggregate the per-element breakdown across sessions.
+  // click counts live either in a nested `clickBreakdown` object or as literal
+  // dotted keys ("clickBreakdown.<name>"), so handle both.
+  const clickMap = {};
+  rows.forEach((s) => {
+    if (s.clickBreakdown && typeof s.clickBreakdown === 'object') {
+      Object.entries(s.clickBreakdown).forEach(([k, v]) => { clickMap[k] = (clickMap[k] || 0) + (v || 0); });
+    }
+    Object.keys(s).forEach((k) => { if (k.indexOf('clickBreakdown.') === 0) { const name = k.slice('clickBreakdown.'.length); clickMap[name] = (clickMap[name] || 0) + (s[k] || 0); } });
+  });
+  const clickRows = Object.entries(clickMap).sort((a, b) => b[1] - a[1]).slice(0, 25);
+  const clickMax = Math.max(1, ...clickRows.map((c) => c[1]));
 
   const exportLeadsCsv = () => {
     const head = ['שם', 'טלפון', 'אימייל', 'הגיע עד', 'מכשיר', 'מקור', 'תאריך'];
@@ -356,6 +372,7 @@ function MonitoringPanel() {
         <div style={card}><div style={statNum}>{avgMin}′</div><div style={statLbl}>זמן ממוצע להזמנה</div></div>
         <div style={card}><div style={statNum}>{fmtDur(avgOnSiteSec)}</div><div style={statLbl}>זמן שהייה ממוצע באתר</div></div>
         <div style={card}><div style={statNum}>{galleryVisits}</div><div style={statLbl}>צפו בגלריה</div></div>
+        <div style={card}><div style={statNum}>{totalClicks}</div><div style={statLbl}>קליקים באתר (ממוצע {avgClicks})</div></div>
       </div>
 
       <div style={{ display: 'flex', gap: 6, background: '#F3E7D8', borderRadius: 999, padding: 4, width: 'fit-content' }}>
@@ -363,6 +380,7 @@ function MonitoringPanel() {
         <button onClick={() => setTab('leads')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'leads' ? '#fff' : BODY, background: tab === 'leads' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>לידים ({leads.length})</button>
         <button onClick={() => setTab('hours')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'hours' ? '#fff' : BODY, background: tab === 'hours' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>שעות ומכשירים</button>
         <button onClick={() => setTab('trends')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'trends' ? '#fff' : BODY, background: tab === 'trends' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>מגמות ומקורות</button>
+        <button onClick={() => setTab('clicks')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'clicks' ? '#fff' : BODY, background: tab === 'clicks' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>איפה לוחצים</button>
       </div>
 
       {tab === 'funnel' ? (
@@ -446,7 +464,7 @@ function MonitoringPanel() {
             })}
           </div>
         </div>
-      ) : (
+      ) : tab === 'trends' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={card}>
             <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>כניסות לפי יום</div>
@@ -492,6 +510,31 @@ function MonitoringPanel() {
               ))}
             </div>
           </div>
+        </div>
+      ) : (
+        <div style={card}>
+          <div style={{ fontWeight: 800, color: INK, marginBottom: 4 }}>איפה לוחצים באתר</div>
+          <div style={{ color: BODY, fontSize: 13, marginBottom: 16 }}>הכפתורים והקישורים הכי נלחצים ({totalClicks} קליקים בסך הכול)</div>
+          {clickRows.length === 0 ? (
+            <div style={{ color: BODY, padding: 30, textAlign: 'center' }}>אין נתוני קליקים בטווח הזמן שנבחר.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {clickRows.map(([name, c]) => {
+                const pct = Math.round((c / clickMax) * 100);
+                return (
+                  <div key={name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                      <span style={{ color: INK, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '75%' }}>{name}</span>
+                      <span style={{ color: BODY }}>{c}</span>
+                    </div>
+                    <div style={{ height: 12, background: '#F3E7D8', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: pct + '%', background: `linear-gradient(90deg, ${ACCENT}, #D96A38)`, borderRadius: 999 }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

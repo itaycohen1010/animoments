@@ -18,7 +18,7 @@
 
 import { config } from './config.js';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
@@ -316,6 +316,17 @@ export async function markGalleryView() {
 export async function trackHeartbeat() {
   if (!ready()) return;
   try { await setDoc(sessionRef(), { endedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }); } catch (e) { /* silent */ }
+}
+
+// Count an on-site click. Increments a total and (optionally) a per-name counter,
+// and bumps endedAt so time-on-site reflects the last real interaction.
+export async function trackClick(name) {
+  if (!ready()) return;
+  try {
+    const data = { clicks: increment(1), endedAt: serverTimestamp(), updatedAt: serverTimestamp() };
+    if (name) data['clickBreakdown.' + name] = increment(1);
+    await setDoc(sessionRef(), data, { merge: true });
+  } catch (e) { /* silent */ }
 }
 
 // Admin: list recent sessions for the monitoring page.
