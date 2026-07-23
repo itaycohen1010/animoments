@@ -14,6 +14,10 @@ export const config = {
   promoTextSize: 24, // popup text size in px (adjust to taste)
   promoImage: '', // optional image URL shown in the popup instead of text
 
+  // Hero showreel video (contained autoplay loop under the hero). Empty = hidden.
+  heroVideo: '',
+  heroPoster: '',
+
   // Cloudinary (unsigned upload). Leave empty for demo mode (no real upload).
   cloudinary: {
     cloudName: 'dmxkoz4jo',

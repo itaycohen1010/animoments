@@ -322,10 +322,13 @@ export async function trackHeartbeat() {
 // and bumps endedAt so time-on-site reflects the last real interaction.
 export async function trackClick(name) {
   if (!ready()) return;
+  const key = (name || '').replace(/[.$\[\]/~*#\s]+/g, '_').slice(0, 40);
+  if (!key) return; // only count named (meaningful) clicks
+  // group all close buttons (×, x, aria "סגירה") under one label
+  const label = (name === '×' || name === 'x' || name === 'X' || name === 'סגירה') ? 'סגירה' : key;
   try {
-    const data = { clicks: increment(1), endedAt: serverTimestamp(), updatedAt: serverTimestamp() };
-    if (name) data['clickBreakdown.' + name] = increment(1);
-    await setDoc(sessionRef(), data, { merge: true });
+    await setDoc(sessionRef(), { clicks: increment(1), endedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+    await setDoc(sessionRef(), { clickBreakdown: { [label]: increment(1) } }, { merge: true });
   } catch (e) { /* silent */ }
 }
 

@@ -79,9 +79,10 @@ export default function App() {
     let active = true;
     const IDLE_MS = 5 * 60000;
     const onClick = (e) => {
-      if (!active) { active = true; } // click after idle re-activates
       const el = e.target && e.target.closest && e.target.closest('a,button,[data-track]');
-      const name = el ? (el.getAttribute('data-track') || (el.textContent || '').trim().slice(0, 30) || el.tagName.toLowerCase()) : null;
+      if (!el) return; // only count meaningful clicks (buttons / links)
+      if (!active) { active = true; }
+      const name = el.getAttribute('data-track') || el.getAttribute('aria-label') || (el.textContent || '').trim().slice(0, 30) || el.tagName.toLowerCase();
       trackClick(name);
       clearTimeout(idleTimer);
       idleTimer = setTimeout(() => { active = false; }, IDLE_MS);
