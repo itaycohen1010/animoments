@@ -6,15 +6,10 @@ import { pillBtn, smallGhostBtn } from '../styles.js';
 export default function LandingScreen({ onStart, onOpenHow }) {
   const [lightbox, setLightbox] = useState(null); // { title, video }
   const [openFaq, setOpenFaq] = useState(null);
-  const faqs = [
+  const faqs = (config.faq && config.faq.length ? config.faq : [
     { q: 'איך עובד תהליך יצירת הסרטון?', a: 'אתם מעלים תמונות, מסדרים אותן לפי הסדר הרצוי ומשלימים את ההזמנה. לאחר מכן, הכלים המתקדמים שלנו יחברו אותן לסרטון אנימציה זורם הכולל סאונד מותאם.' },
-    { q: 'תוך כמה זמן אקבל את הסרטון?', a: 'זמן האספקה הוא לרוב מספר שעות, ועד מקסימום 48 שעות. כל סרטון עובר עיבוד מורכב של בינה מלאכותית, כדי להבטיח את התוצאה האיכותית ביותר.' },
-    { q: 'מה קורה לתמונות שאני מעלה?', a: 'הפרטיות שלכם מובטחת. התמונות שאתם מעלים משמשות אך ורק ליצירת הסרטון שלכם. אנחנו לא שומרים את התמונות במערכת ולא עושים בהן שום שימוש נוסף לאחר מסירת התוצר.' },
-    { q: 'האם ניתן לקבל החזר כספי?', a: 'לא. מכיוון שכל סרטון מיוצר במיוחד ובהתאמה אישית מלאה עבורכם, ודורש משאבי מחשוב יקרים, לא ניתן לבטל הזמנה או לקבל החזר כספי לאחר תחילת העבודה. אנא ודאו שהתמונות והסדר שלהן מושלמים מבחינתכם לפני אישור התשלום.' },
-    { q: 'האם התוצאה תמיד נראית מציאותית ב-100%?', a: 'טכנולוגיית הבינה המלאכותית שלנו מפיקה תוצאות מרהיבות, אך מטבעה ייתכנו תנועות אמנותיות בלתי צפויות או עיוותים קלים באנימציה. זהו למעשה הקסם והייחוד של יצירה ב-AI, שמבטיח שכל סרטון הוא יצירה חד-פעמית.' },
-    { q: 'כמה תמונות כדאי להעלות?', a: 'המערכת מאפשרת העלאה של בין 8 ל-30 תמונות. מומלץ להעלות תמונות ברורות ומוארות. כל מעבר בין שתי תמונות ייצר קטע אנימציה של כ-5 שניות.' },
-    { q: 'האם ניתן להוסיף שיר אמיתי ברקע?', a: 'לא. מטעמי זכויות יוצרים איננו יכולים לשלב שירים מסחריים או מוכרים בסרטונים. במקום זאת אנו בוחרים עבורכם פסקול איכותי ונטול זכויות, שמותאם לתחושה שבחרתם — כדי שהסרטון יישאר שלכם לחלוטין, לשיתוף ולשמירה ללא כל חשש משפטי.' }
-  ];
+    { q: 'תוך כמה זמן אקבל את הסרטון?', a: 'זמן האספקה הוא לרוב מספר שעות, ועד מקסימום 48 שעות. כל סרטון עובר עיבוד מורכב של בינה מלאכותית, כדי להבטיח את התוצאה האיכותית ביותר.' }
+  ]);
 
   // Build the right player for a URL: YouTube/Vimeo → iframe embed, else <video>.
   const playerEl = (url) => {
@@ -36,12 +31,12 @@ export default function LandingScreen({ onStart, onOpenHow }) {
           <p style={{ fontSize: 'clamp(1.05rem, 2vw, 1.25rem)', lineHeight: 1.75, color: C.body, maxWidth: 560, margin: '0 auto 30px', textWrap: 'pretty' }}>
             בוחרים תמונות, קובעים את הסדר — ואנחנו מחברים אותן לסרטון וידאו חלק ואיכותי.
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginBottom: 34 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
             {['✓ מוכן תוך 48 שעות', '✓ עובד ישירות מהטלפון', '✓ בלי להתקין כלום'].map((t) => (
               <span key={t} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 999, padding: '8px 18px', fontSize: 14, fontWeight: 600, color: C.body, boxShadow: '0 4px 14px rgba(180,100,70,.08)' }}>{t}</span>
             ))}
           </div>
-          <button onClick={() => onStart()} style={{ ...pillBtn, fontSize: 19, padding: '18px 44px', animation: 'cta-pulse 2.2s ease-in-out infinite' }}>מתחילים — העלאת תמונות</button>
+          <button onClick={() => onStart()} style={{ ...pillBtn, fontSize: 19, padding: '18px 44px', animation: 'cta-pulse 2.2s ease-in-out infinite' }}>צרו סרטון עכשיו!</button>
           <div style={{ marginTop: 14 }}>
             <button onClick={() => onOpenHow(1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 600, color: C.muted, textDecoration: 'underline', textUnderlineOffset: 4 }}>לצפייה בהדגמה קצרה 👀</button>
           </div>
@@ -76,6 +71,9 @@ export default function LandingScreen({ onStart, onOpenHow }) {
           </div>
           <div style={{ height: 16, backgroundImage: 'repeating-linear-gradient(90deg, transparent 0 12px, #FAF0E6 12px 24px, transparent 24px 34px)', opacity: .85 }} />
         </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 14, padding: '22px 24px 4px', color: C.body, fontSize: 15, fontWeight: 800 }}>
+          <span>🎬 {(config.socialProof || {}).stat || '+300 סרטונים נוצרו'}</span>
+        </div>
       </div>
 
       {/* how it works */}
@@ -104,7 +102,12 @@ export default function LandingScreen({ onStart, onOpenHow }) {
       {/* pricing */}
       <div id="pricing" className="section-pad" style={{ maxWidth: 1080, margin: '0 auto', padding: '90px 24px 40px', scrollMarginTop: 90 }}>
         <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.7rem, 4vw, 2.4rem)', textAlign: 'center', margin: '0 0 12px' }}>מחירים וחבילות</h2>
-        <p style={{ textAlign: 'center', color: C.muted, fontSize: '1.05rem', margin: '0 0 48px' }}>בוחרים חבילה — משלמים רק בסוף, אחרי שבחרתם תמונות.</p>
+        <p style={{ textAlign: 'center', color: C.muted, fontSize: '1.05rem', margin: '0 0 20px' }}>בוחרים חבילה — משלמים רק בסוף, אחרי שבחרתם תמונות.</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, margin: '0 0 44px', color: C.body, fontSize: 13.5, fontWeight: 700 }}>
+          {['🔒 תשלום מאובטח', '⏱️ מוכן תוך 48 שעות'].map((t) => (
+            <span key={t} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 999, padding: '7px 16px', boxShadow: '0 4px 14px rgba(180,100,70,.08)' }}>{t}</span>
+          ))}
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 22, alignItems: 'stretch' }}>
           {config.packages.map((p) => (
             <div key={p.key} className={p.featured ? 'featured-card' : ''}

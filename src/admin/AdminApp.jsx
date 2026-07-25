@@ -97,6 +97,10 @@ function SettingsEditor() {
   const setEx = (i, k, v) => setData((d) => { const e = [...(d.examples || [])]; e[i] = { ...e[i], [k]: v }; return { ...d, examples: e }; });
   const addEx = () => setData((d) => ({ ...d, examples: [...(d.examples || []), { title: '', img: '', video: '' }] }));
   const delEx = (i) => setData((d) => ({ ...d, examples: (d.examples || []).filter((_, j) => j !== i) }));
+  const setFaq = (i, k, v) => setData((d) => { const f = [...(d.faq || [])]; f[i] = { ...f[i], [k]: v }; return { ...d, faq: f }; });
+  const addFaq = () => setData((d) => ({ ...d, faq: [...(d.faq || []), { q: '', a: '' }] }));
+  const delFaq = (i) => setData((d) => ({ ...d, faq: (d.faq || []).filter((_, j) => j !== i) }));
+  const setSocial = (k, v) => setData((d) => ({ ...d, socialLinks: { ...(d.socialLinks || {}), [k]: v } }));
 
   const save = async () => {
     setBusy(true); setSaved(false);
@@ -152,6 +156,35 @@ function SettingsEditor() {
             <div style={{ flex: 1, minWidth: 200 }}><span style={label}>קישור וידאו</span><input style={ltrInp} value={ex.video || ''} onChange={(e) => setEx(i, 'video', e.target.value)} /></div>
             <div style={{ flex: 1, minWidth: 200 }}><span style={label}>תמונה (URL)</span><input style={ltrInp} value={ex.img || ''} onChange={(e) => setEx(i, 'img', e.target.value)} /></div>
             <button onClick={() => delEx(i)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: ACCENT, fontSize: 20, paddingBottom: 8 }}>×</button>
+          </div>
+        ))}
+      </div>
+
+      <div style={box}>
+        <h3 style={{ margin: '0 0 16px', color: INK, fontSize: '1.1rem' }}>הוכחה חברתית</h3>
+        <div style={{ marginBottom: 12 }}><span style={label}>טקסט "סרטונים נוצרו" (מתחת לסרט הנע)</span><input style={inp} value={(data.socialProof || {}).stat || ''} onChange={(e) => setData((d) => ({ ...d, socialProof: { ...(d.socialProof || {}), stat: e.target.value } }))} placeholder="+300 סרטונים נוצרו" /></div>
+      </div>
+
+      <div style={box}>
+        <h3 style={{ margin: '0 0 16px', color: INK, fontSize: '1.1rem' }}>קישורים לרשתות (ריק = מוסתר)</h3>
+        {[['facebook', 'פייסבוק'], ['instagram', 'אינסטגרם'], ['whatsapp', 'וואטסאפ'], ['youtube', 'יוטיוב'], ['tiktok', 'טיקטוק']].map(([k, lbl]) => (
+          <div key={k} style={{ marginBottom: 12 }}><span style={label}>{lbl}</span><input style={ltrInp} value={(data.socialLinks || {})[k] || ''} onChange={(e) => setSocial(k, e.target.value)} /></div>
+        ))}
+      </div>
+
+      <div style={box}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+          <h3 style={{ margin: 0, color: INK, fontSize: '1.1rem' }}>שאלות ותשובות (FAQ)</h3>
+          <div style={{ flex: 1 }} />
+          <button onClick={addFaq} style={{ border: `1.5px solid ${ACCENT}`, background: '#fff', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 13, color: ACCENT, padding: '6px 14px', borderRadius: 999 }}>+ הוספה</button>
+        </div>
+        {(data.faq || []).map((f, i) => (
+          <div key={i} style={{ paddingBottom: 12, marginBottom: 12, borderBottom: `1px solid ${BORDER}` }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+              <input style={{ ...inp, flex: 1, fontWeight: 700 }} placeholder="שאלה" value={f.q || ''} onChange={(e) => setFaq(i, 'q', e.target.value)} />
+              <button onClick={() => delFaq(i)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: ACCENT, fontSize: 20 }}>×</button>
+            </div>
+            <textarea style={{ ...inp, minHeight: 60, width: '100%' }} placeholder="תשובה" value={f.a || ''} onChange={(e) => setFaq(i, 'a', e.target.value)} />
           </div>
         ))}
       </div>
@@ -316,6 +349,10 @@ function MonitoringPanel() {
   const fmtDur = (sec) => sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} דק׳` : `${sec} שנ׳`;
   // gallery visits
   const galleryVisits = rows.filter((s) => s.viewedGallery).length;
+  // avg scroll depth on the landing
+  const scrolls = rows.map((s) => s.scrollDepth || 0).filter((v) => v > 0);
+  const avgScroll = scrolls.length ? Math.round(scrolls.reduce((a, b) => a + b, 0) / scrolls.length) : 0;
+  const reachedPricing = rows.filter((s) => (s.scrollDepth || 0) >= 60).length;
   // total on-site clicks + avg per session
   const totalClicks = rows.reduce((a, s) => a + (s.clicks || 0), 0);
   const avgClicks = total ? (totalClicks / total).toFixed(1) : 0;
@@ -372,10 +409,12 @@ function MonitoringPanel() {
         <div style={card}><div style={statNum}>{avgMin}′</div><div style={statLbl}>זמן ממוצע להזמנה</div></div>
         <div style={card}><div style={statNum}>{fmtDur(avgOnSiteSec)}</div><div style={statLbl}>זמן שהייה ממוצע באתר</div></div>
         <div style={card}><div style={statNum}>{galleryVisits}</div><div style={statLbl}>צפו בגלריה</div></div>
+        <div style={card}><div style={statNum}>{avgScroll}%</div><div style={statLbl}>גלילה ממוצעת בדף הבית</div></div>
+        <div style={card}><div style={statNum}>{reachedPricing}</div><div style={statLbl}>הגיעו לאזור המחירים</div></div>
         <div style={card}><div style={statNum}>{totalClicks}</div><div style={statLbl}>קליקים באתר (ממוצע {avgClicks})</div></div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, background: '#F3E7D8', borderRadius: 999, padding: 4, width: 'fit-content' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, background: '#F3E7D8', borderRadius: 20, padding: 4 }}>
         <button onClick={() => setTab('funnel')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'funnel' ? '#fff' : BODY, background: tab === 'funnel' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>משפך המרה</button>
         <button onClick={() => setTab('leads')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'leads' ? '#fff' : BODY, background: tab === 'leads' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>לידים ({leads.length})</button>
         <button onClick={() => setTab('hours')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'hours' ? '#fff' : BODY, background: tab === 'hours' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>שעות ומכשירים</button>
@@ -562,7 +601,7 @@ function Dashboard() {
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <h1 style={{ fontWeight: 800, fontSize: '1.5rem', color: INK, margin: 0 }}>ניהול</h1>
-          <div style={{ display: 'flex', gap: 6, background: '#F3E7D8', borderRadius: 999, padding: 4 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, background: '#F3E7D8', borderRadius: 20, padding: 4 }}>
             <button onClick={() => setTab('orders')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'orders' ? '#fff' : BODY, background: tab === 'orders' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>הזמנות</button>
             <button onClick={() => setTab('settings')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'settings' ? '#fff' : BODY, background: tab === 'settings' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>הגדרות האתר</button>
             <button onClick={() => setTab('gallery')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'gallery' ? '#fff' : BODY, background: tab === 'gallery' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>גלריה</button>

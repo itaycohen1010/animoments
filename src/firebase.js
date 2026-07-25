@@ -318,6 +318,16 @@ export async function trackHeartbeat() {
   try { await setDoc(sessionRef(), { endedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }); } catch (e) { /* silent */ }
 }
 
+// Record the max scroll depth (0–100%) reached on the landing.
+let _maxScroll = 0;
+export async function trackScroll(pct) {
+  if (!ready()) return;
+  const v = Math.max(0, Math.min(100, Math.round(pct)));
+  if (v <= _maxScroll) return;
+  _maxScroll = v;
+  try { await setDoc(sessionRef(), { scrollDepth: v, updatedAt: serverTimestamp() }, { merge: true }); } catch (e) { /* silent */ }
+}
+
 // Count an on-site click. Increments a total and (optionally) a per-name counter,
 // and bumps endedAt so time-on-site reflects the last real interaction.
 export async function trackClick(name) {

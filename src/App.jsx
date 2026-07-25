@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { config, colors as C } from './config.js';
 import { legalDocs } from './legal.js';
-import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, markConverted, markGalleryView, trackHeartbeat, trackClick } from './firebase.js';
+import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, markConverted, markGalleryView, trackHeartbeat, trackClick, trackScroll } from './firebase.js';
 
 import Nav from './components/Nav.jsx';
 import Footer from './components/Footer.jsx';
@@ -72,6 +72,22 @@ export default function App() {
   // analytics: start a session on first load, and record every step change for the funnel
   useEffect(() => { startSession(); }, []);
   useEffect(() => { trackStep(step); }, [step]);
+  // scroll depth (landing only) — throttled, records the furthest % reached
+  useEffect(() => {
+    if (step !== 0 || lookup || gallery) return;
+    let t = null;
+    const onScroll = () => {
+      if (t) return;
+      t = setTimeout(() => {
+        t = null;
+        const h = document.documentElement;
+        const max = h.scrollHeight - h.clientHeight;
+        if (max > 0) trackScroll((h.scrollTop / max) * 100);
+      }, 400);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); if (t) clearTimeout(t); };
+  }, [step, lookup, gallery]);
   // clicks + idle session: count every on-site click and stop tracking after 5 min
   // with no clicks (so time-on-site reflects real interaction, not tabs left open).
   useEffect(() => {
@@ -449,6 +465,15 @@ export default function App() {
       )}
 
       <Footer onOpenLegal={(key) => setModal(key)} />
+
+      {/* floating WhatsApp — landing + gallery only */}
+      {((step === 0 && !lookup) || gallery) && (config.socialLinks && (config.socialLinks.whatsapp || '').trim()) && (
+        <a href={config.socialLinks.whatsapp} target="_blank" rel="noopener" aria-label="פנו אלינו בוואטסאפ" data-track="וואטסאפ צף" className="wa-float"
+          style={{ position: 'fixed', bottom: 22, left: 22, zIndex: 120, display: 'inline-flex', alignItems: 'center', gap: 10, height: 52, padding: '0 20px 0 14px', borderRadius: 999, background: '#fff', border: '1px solid #EADFD2', boxShadow: '0 8px 22px rgba(59,42,32,.16)', color: '#3B2A20', textDecoration: 'none', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 15 }}>
+          <svg width="30" height="30" viewBox="0 0 24 24"><path fill="#25D366" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.9c0 1.76.46 3.45 1.34 4.95L2 22l5.3-1.38a9.9 9.9 0 0 0 4.74 1.2h.01c5.46 0 9.9-4.44 9.9-9.9 0-2.64-1.03-5.13-2.9-7A9.82 9.82 0 0 0 12.04 2z"/><path fill="#fff" d="M16.69 14.02c-.25-.13-1.48-.73-1.71-.81-.23-.09-.4-.13-.56.12-.17.25-.65.81-.79.98-.15.16-.29.18-.54.06-.25-.13-1.06-.39-2.01-1.24-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.01-.38.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.42h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1s.9 2.43 1.03 2.6c.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.48-.6 1.69-1.19.21-.58.21-1.08.14-1.19-.06-.11-.23-.17-.48-.29z"/></svg>
+          <span>פנו אלינו</span>
+        </a>
+      )}
 
       {/* toast */}
       {toast && (
