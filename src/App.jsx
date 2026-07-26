@@ -18,7 +18,6 @@ import LegalModal from './modals/LegalModal.jsx';
 import HowItWorksModal from './modals/HowItWorksModal.jsx';
 import TipsModal from './modals/TipsModal.jsx';
 import ConfirmChecklistModal from './modals/ConfirmChecklistModal.jsx';
-import BlessingModal from './modals/BlessingModal.jsx';
 
 // ===================================================================
 // App — state + flow logic; all UI lives in screens/ and modals/
@@ -32,10 +31,9 @@ export default function App() {
   const [photos, setPhotos] = useState([]);          // {id, url, file}
   const [dragIndex, setDragIndex] = useState(null);
   const [dzOver, setDzOver] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', email: '', email2: '', agree: false });
+  const [form, setForm] = useState({ name: '', phone: '', email: '', agree: false });
   const [formError, setFormError] = useState(null);
   const [card, setCard] = useState({ name: '', num: '', exp: '', cvv: '' });
-  const [blessing, setBlessing] = useState('');
   const [mood, setMood] = useState('');
   const [payError, setPayError] = useState(null);
   const [result, setResult] = useState('processing'); // processing | failed | done
@@ -47,26 +45,28 @@ export default function App() {
   const [gallery, setGallery] = useState(false); // 'גלריה' screen
   const [promoOpen, setPromoOpen] = useState(!!((config.promoPopup || '').trim() || (config.promoImage || '').trim()));
   const [settingsTick, setSettingsTick] = useState(0); // bumps after DB settings load to re-render
+  const [settingsLoaded, setSettingsLoaded] = useState(false); // gate render until DB settings resolve (DB is source of truth)
 
   // Load business settings from the DB (settings/site) and apply over config.js defaults.
   // config.js stays as the instant fallback until this resolves.
   useEffect(() => {
     fetchSettings().then((s) => {
-      if (!s) return;
-      Object.assign(config, s);            // override any provided fields (packages, prices, announcement, promo, examples…)
-      if (Array.isArray(s.packages)) {
-        // DB stores raw packages (price = original, discount = %); re-apply the sale transform
-        config.packages = s.packages.map((p) => {
-          const d = Math.min(90, Math.max(0, p.discount || 0));
-          return { ...p, basePrice: p.price, price: Math.round(p.price * (100 - d) / 100) };
-        });
+      if (s) {
+        Object.assign(config, s);            // DB is the source of truth for content
+        if (Array.isArray(s.packages)) {
+          config.packages = s.packages.map((p) => {
+            const d = Math.min(90, Math.max(0, p.discount || 0));
+            return { ...p, basePrice: p.price, price: Math.round(p.price * (100 - d) / 100) };
+          });
+        }
+        if (!config.packages.some((p) => p.key === pkgKey)) {
+          setPkgKey((config.packages.find((p) => p.key === config.defaultPackageKey) || config.packages[1] || config.packages[0]).key);
+        }
+        setPromoOpen(!!((config.promoPopup || '').trim() || (config.promoImage || '').trim()));
       }
-      if (!config.packages.some((p) => p.key === pkgKey)) {
-        setPkgKey((config.packages.find((p) => p.key === config.defaultPackageKey) || config.packages[1] || config.packages[0]).key);
-      }
-      setPromoOpen(!!((config.promoPopup || '').trim() || (config.promoImage || '').trim()));
       setSettingsTick((t) => t + 1);
-    });
+      setSettingsLoaded(true);
+    }).catch(() => setSettingsLoaded(true));
   }, []); // eslint-disable-line
 
   // analytics: start a session on first load, and record every step change for the funnel
@@ -220,14 +220,12 @@ export default function App() {
     const phoneRaw = form.phone.trim();
     const phoneOk = /^0(5\d|[2-46-9])\d{7,8}$/.test(phoneRaw.replace(/[\s-]/g, '')) || (phoneRaw.startsWith('+') && phoneDigits >= 8 && phoneDigits <= 15);
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-    const email2Ok = form.email.trim() === (form.email2 || '').trim() && (form.email2 || '').trim().length > 0;
-    if (nameOk && phoneOk && emailOk && email2Ok && form.agree) return null;
-    if (nameOk && phoneOk && emailOk && email2Ok && !form.agree) return 'יש לאשר את תנאי השימוש ומדיניות הפרטיות';
+    if (nameOk && phoneOk && emailOk && form.agree) return null;
+    if (nameOk && phoneOk && emailOk && !form.agree) return 'יש לאשר את תנאי השימוש ומדיניות הפרטיות';
     const missing = [];
     if (!nameOk) missing.push('שם');
     if (!phoneOk) missing.push('מספר טלפון תקין');
     if (!emailOk) missing.push('כתובת אימייל תקינה');
-    if (emailOk && !email2Ok) return 'האימייל בשני השדות אינו זהה';
     if (missing.length === 1) return 'נא למלא ' + missing[0];
     return 'נא למלא ' + missing.slice(0, -1).join(', ') + ' ו' + missing[missing.length - 1];
   };
@@ -235,10 +233,7 @@ export default function App() {
   // ---------- navigation ----------
   const startOrder = (key) => {
     if (key) setPkgKey(key);
-    const openTips = !tipsShownRef.current;
-    tipsShownRef.current = true;
-    setStep(1); // photos first
-    if (openTips) setModal('tips');
+    setStep(1); // photos first — tips no longer auto-open
   };
 
   const detailsToPhotos = () => {
@@ -254,7 +249,7 @@ export default function App() {
       showToast(`חבילת "${pkg.name}" מוגבלת ל-${pkg.maxPhotos} תמונות — הסירו ${photos.length - pkg.maxPhotos} תמונות או שדרגו חבילה`);
       return;
     }
-    setModal('confirm'); // checklist → blessing → payment
+    setModal(null); setStep(2); window.scrollTo(0, 0); // checklist is inline on upload; go straight to details
   };
 
   // ---------- email ----------
@@ -290,7 +285,7 @@ export default function App() {
     saveOrder({
       orderId: getOrderId(), name: form.name.trim(), phone: form.phone.trim(), email: form.email.trim(),
       packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price,
-      photoCount: photos.length, mood, blessing, folder
+      photoCount: photos.length, mood, blessing: (form.blessing || ''), folder
     });
   };
 
@@ -405,9 +400,9 @@ export default function App() {
     orderIdRef.current = null;
     emailSentRef.current = false;
     orderSavedRef.current = false;
-    setStep(0); setPhotos([]); setForm({ name: '', phone: '', email: '', email2: '', agree: false });
+    setStep(0); setPhotos([]); setForm({ name: '', phone: '', email: '', agree: false, blessing: '' });
     setCard({ name: '', num: '', exp: '', cvv: '' });
-    setBlessing(''); setMood('');
+    setMood('');
     setFormError(null); setPayError(null); setResult('processing'); setUploadedCount(0);
   };
 
@@ -416,6 +411,13 @@ export default function App() {
   const journeyLabel = ['ברוכים הבאים', 'שלב 1 מתוך 4 — בחירת תמונות', 'שלב 2 מתוך 4 — פרטים', 'שלב 3 מתוך 4 — תשלום', 'שלב 4 מתוך 4 — סיום ✓'][step];
 
   // ===================================================================
+  if (!settingsLoaded) {
+    return (
+      <div className="app-shell" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 44, height: 44, border: '4px solid #F0D9C4', borderTopColor: C.accent, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      </div>
+    );
+  }
   return (
     <div className="app-shell">
       <Nav step={step} journeyPct={journeyPct} journeyLabel={journeyLabel}
@@ -442,7 +444,7 @@ export default function App() {
           mood={mood} setMood={setMood}
           showToast={showToast}
           onBack={() => setStep(0)} onContinue={photosToPayment}
-          onOpenTips={() => setModal('tips')} onOpenHow={openHow} />
+          onOpenTips={() => setModal('tips')} onOpenChecklist={() => setModal('confirm')} onOpenHow={openHow} />
       )}
 
       {step === 2 && (
@@ -493,15 +495,7 @@ export default function App() {
       )}
       {modal === 'how' && <HowItWorksModal initialStep={howStep} onClose={() => setModal(null)} />}
       {modal === 'tips' && <TipsModal onClose={() => setModal(null)} />}
-      {modal === 'confirm' && (
-        <ConfirmChecklistModal onConfirm={() => setModal('blessing')} onClose={() => setModal(null)} />
-      )}
-      {modal === 'blessing' && (
-        <BlessingModal blessing={blessing} setBlessing={setBlessing}
-          onContinue={() => { setModal(null); setStep(2); setPayError(null); }}
-          onSkip={() => { setBlessing(''); setModal(null); setStep(2); setPayError(null); }}
-          onClose={() => setModal(null)} />
-      )}
+      {modal === 'confirm' && <ConfirmChecklistModal onConfirm={() => setModal(null)} onClose={() => setModal(null)} />}
       {modal === 'privacy' && <LegalModal doc={legalDocs.privacy} onClose={() => setModal(null)} />}
       {modal === 'accessibility' && <LegalModal doc={legalDocs.accessibility} onClose={() => setModal(null)} />}
       {modal === 'terms' && <LegalModal doc={legalDocs.terms} onClose={() => setModal(null)} />}

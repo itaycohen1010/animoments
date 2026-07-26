@@ -7,22 +7,21 @@ export default function UploadScreen({
   pkg, pkgKey, setPkgKey, photos, setPhotos,
   dragIndex, setDragIndex, dzOver, setDzOver,
   addFiles, reorder, touchDrag, fileInputRef,
-  showToast, onBack, onContinue, onOpenTips, onOpenHow,
+  showToast, onBack, onContinue, onOpenTips, onOpenHow, onOpenChecklist,
   mood, setMood
 }) {
   const moodList = ['מרגש', 'שמח וחגיגי', 'נוסטלגי', 'רגוע ועדין', 'אנרגטי', 'רומנטי'];
   return (
     <div data-screen-label="Upload" style={{ maxWidth: 880, margin: '0 auto', padding: '40px 20px 60px', animation: 'rise-in .5s ease both', width: '100%', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 240 }}>
-          <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.5rem, 4vw, 2rem)', margin: '0 0 8px' }}>בחרו את התמונות לסרטון</h2>
-          <p style={{ color: C.body, fontSize: '1rem', lineHeight: 1.7, margin: '0 0 24px' }}>העלו לפחות 2 תמונות. הסדר שתקבעו כאן הוא הסדר שבו הן יופיעו בסרטון.</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button onClick={onOpenTips} style={smallGhostBtn}>💡 דברים שחשוב לדעת</button>
-          <button onClick={() => onOpenHow(2)} style={smallGhostBtn}>איך זה עובד? 👀</button>
-        </div>
+      <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.5rem, 4vw, 2rem)', margin: '0 0 8px' }}>בחרו את התמונות לסרטון</h2>
+      <p style={{ color: C.body, fontSize: '1rem', lineHeight: 1.7, margin: '0 0 10px' }}>העלו לפחות 2 תמונות. הסדר שתקבעו כאן הוא הסדר שבו הן יופיעו בסרטון.</p>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '0 0 12px', padding: '14px 16px', background: C.cream, border: `1px solid ${C.border}`, borderRadius: 14 }}>
+        <span style={{ fontWeight: 800, fontSize: 14, color: C.ink, alignSelf: 'center' }}>מידע ועזרה:</span>
+        {[['✅ דברים לבדוק', onOpenChecklist], ['💡 דברים שחשוב לדעת', onOpenTips], ['איך זה עובד? 👀', () => onOpenHow(1)]].map(([label, fn]) => (
+          <button key={label} onClick={fn} style={{ border: `1.5px solid ${C.borderStrong}`, background: '#fff', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 13.5, color: C.body, padding: '7px 14px', borderRadius: 999 }}>{label}</button>
+        ))}
       </div>
+      <div style={{ height: 1, background: C.border, margin: '0 0 24px' }}></div>
 
       <input type="file" accept="image/*" multiple ref={fileInputRef} onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
 

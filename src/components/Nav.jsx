@@ -20,6 +20,7 @@ export default function Nav({ step, journeyPct, journeyLabel, onHome, onStart, o
           <>
             <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, fontSize: 15 }}>
               <a href="#how" onClick={(e) => onSection(e, 'how')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>איך זה עובד</a>
+              <a href="#testimonials" onClick={(e) => onSection(e, 'testimonials')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>לקוחות מספרים</a>
               <a href="#pricing" onClick={(e) => onSection(e, 'pricing')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>מחירים</a>
               <a href="#faq" onClick={(e) => onSection(e, 'faq')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>שאלות ותשובות</a>
             </div>

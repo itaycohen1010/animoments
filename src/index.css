@@ -23,6 +23,11 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 
 @keyframes film-scroll { from { transform: translateX(-50%); } to { transform: translateX(0); } }
 .wa-float { transition: transform .18s ease, box-shadow .18s ease; }
+.testi-scroll:hover .testi-track, .testi-scroll:active .testi-track { animation-play-state: paused; }
+.testi-card .testi-btn { opacity: 0; transition: opacity .18s ease; }
+.testi-card:hover .testi-btn { opacity: 1; }
+.testi-card { font-size: 0; line-height: 0; }
+.testi-card img { display: block; width: 100%; height: auto; }
 .wa-float:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(59,42,32,.22); }
 @keyframes cta-pulse {
   0%, 100% { box-shadow: 0 10px 30px rgba(196,80,46,.35), 0 0 0 0 rgba(196,80,46,.35); }

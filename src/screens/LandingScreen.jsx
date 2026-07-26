@@ -5,6 +5,7 @@ import { pillBtn, smallGhostBtn } from '../styles.js';
 // Screen 0 — landing page: hero, dictionary word, filmstrip, how-it-works, pricing, closing CTA.
 export default function LandingScreen({ onStart, onOpenHow }) {
   const [lightbox, setLightbox] = useState(null); // { title, video }
+  const [zoomImg, setZoomImg] = useState(null); // testimonial zoom
   const [openFaq, setOpenFaq] = useState(null);
   const faqs = (config.faq && config.faq.length ? config.faq : [
     { q: 'איך עובד תהליך יצירת הסרטון?', a: 'אתם מעלים תמונות, מסדרים אותן לפי הסדר הרצוי ומשלימים את ההזמנה. לאחר מכן, הכלים המתקדמים שלנו יחברו אותן לסרטון אנימציה זורם הכולל סאונד מותאם.' },
@@ -99,6 +100,24 @@ export default function LandingScreen({ onStart, onOpenHow }) {
         </div>
       </div>
 
+      {/* testimonials — WhatsApp-style */}
+      <div id="testimonials" className="section-pad" style={{ maxWidth: 1080, margin: '0 auto', padding: '80px 24px 10px', scrollMarginTop: 90 }}>
+        <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.7rem, 4vw, 2.4rem)', textAlign: 'center', margin: '0 0 44px' }}>לקוחות מספרים...</h2>
+        <div className="testi-scroll" style={{ overflow: 'hidden', direction: 'ltr' }}>
+          <div className="testi-track" style={{ display: 'flex', width: 'max-content', gap: 18, alignItems: 'flex-start', animation: 'film-scroll 48s linear infinite' }}>
+            {[0, 1].map((half) => (
+              <div key={half} style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
+                {(config.testimonialImages || []).map((src, i) => (
+                  <div key={i} className="testi-card" onClick={() => setZoomImg(src)} style={{ position: 'relative', width: 210, borderRadius: 18, overflow: 'hidden', boxShadow: '0 14px 36px rgba(59,42,32,.22)', flexShrink: 0, cursor: 'pointer', background: 'transparent', fontSize: 0, lineHeight: 0 }}>
+                    <img src={src} alt="תגובת לקוח/ה בוואטסאפ" loading="lazy" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* pricing */}
       <div id="pricing" className="section-pad" style={{ maxWidth: 1080, margin: '0 auto', padding: '90px 24px 40px', scrollMarginTop: 90 }}>
         <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.7rem, 4vw, 2.4rem)', textAlign: 'center', margin: '0 0 12px' }}>מחירים וחבילות</h2>
@@ -167,6 +186,13 @@ export default function LandingScreen({ onStart, onOpenHow }) {
           </div>
         </div>
       </div>
+
+      {/* testimonial zoom */}
+      {zoomImg && (
+        <div onClick={() => setZoomImg(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(30,20,14,.85)', backdropFilter: 'blur(6px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <img src={zoomImg} alt="תגובת לקוח/ה" style={{ maxWidth: '92vw', maxHeight: '88vh', borderRadius: 18, boxShadow: '0 30px 70px rgba(0,0,0,.5)' }} />
+        </div>
+      )}
 
       {/* example-video lightbox */}
       {lightbox && (

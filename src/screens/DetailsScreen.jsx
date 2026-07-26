@@ -2,6 +2,8 @@ import React from 'react';
 import { colors as C } from '../config.js';
 import { pillBtn, ghostBtn, smallGhostBtn, inputStyle } from '../styles.js';
 
+const BLESSING_MAX = 1000;
+
 // Screen 1 — customer details (name / phone / email). First step of the order flow.
 export default function DetailsScreen({ pkg, form, setForm, formError, setFormError, onBack, onContinue, onOpenHow, onOpenLegal }) {
   const nameInvalid = !!formError && form.name.trim().length === 0;
@@ -10,7 +12,6 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
   const phoneOk = /^0(5\d|[2-46-9])\d{7,8}$/.test(phoneRaw.replace(/[\s-]/g, '')) || (phoneRaw.startsWith('+') && phoneDigits >= 8 && phoneDigits <= 15);
   const phoneInvalid = !!formError && !phoneOk;
   const emailInvalid = !!formError && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-  const email2Invalid = !!formError && ((form.email2 || '').trim() !== form.email.trim() || !(form.email2 || '').trim());
   const agreeInvalid = !!formError && !form.agree;
 
   const field = (label, key, type, placeholder, invalid, noPaste) => (
@@ -40,7 +41,15 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
           {field('השם שלכם *', 'name', 'text', 'לדוגמה: רותי לוי', nameInvalid)}
           {field('מספר טלפון *', 'phone', 'tel', '050-1234567 או ‎+1 555 123 4567', phoneInvalid)}
           {field('כתובת אימייל *', 'email', 'email', 'ruti@gmail.com', emailInvalid)}
-          {field('אימות כתובת אימייל *', 'email2', 'email', 'הקלידו שוב את האימייל', email2Invalid, true)}
+        </div>
+
+        {/* optional blessing — inline, not a separate step */}
+        <div style={{ marginTop: 4 }}>
+          <label style={{ display: 'block', fontWeight: 700, fontSize: '.95rem', marginBottom: 6 }}>ברכה אישית לסרטון <span style={{ color: C.muted, fontWeight: 400 }}>(אופציונלי)</span></label>
+          <textarea value={form.blessing || ''} onChange={(e) => setForm({ ...form, blessing: e.target.value.slice(0, BLESSING_MAX) })} rows={3}
+            placeholder="כמה משפטים מהלב שיופיעו בסוף הסרטון — לדוגמה: לסבתא רחל היקרה, אוהבים תמיד ❤️"
+            style={{ width: '100%', boxSizing: 'border-box', direction: 'rtl', resize: 'none', border: `1.5px solid ${C.borderStrong}`, background: '#FFFDFA', borderRadius: 14, padding: '13px 16px', fontSize: 16, color: C.ink, outline: 'none', fontFamily: "'Heebo', sans-serif", lineHeight: 1.7 }} />
+          <div style={{ textAlign: 'left', fontSize: '.8rem', fontWeight: 700, color: (form.blessing || '').length >= BLESSING_MAX ? C.accentDark : C.muted, marginTop: 4 }}>{(form.blessing || '').length}/{BLESSING_MAX}</div>
         </div>
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 16, cursor: 'pointer', padding: agreeInvalid ? '10px 12px' : 0, background: agreeInvalid ? '#FBE4D7' : 'transparent', borderRadius: 12 }}>
           <input type="checkbox" checked={!!form.agree} onChange={(e) => { setForm({ ...form, agree: e.target.checked }); setFormError(null); }} style={{ width: 20, height: 20, marginTop: 1, accentColor: C.accent, flexShrink: 0, cursor: 'pointer' }} />

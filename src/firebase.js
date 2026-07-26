@@ -58,6 +58,21 @@ function ready() {
   }
 }
 
+// ---------- admin: upload an image to Cloudinary (unsigned), return its secure URL ----------
+export async function uploadToStorage(file, folder) {
+  const cloud = (config.cloudinary && config.cloudinary.cloudName || '').trim();
+  const preset = (config.cloudinary && config.cloudinary.uploadPreset || '').trim();
+  if (!cloud || !preset) throw new Error('Cloudinary not configured');
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('upload_preset', preset);
+  if (folder) fd.append('folder', folder);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cloud)}/image/upload`, { method: 'POST', body: fd });
+  if (!res.ok) throw new Error('upload failed: ' + res.status);
+  const data = await res.json();
+  return data.secure_url;
+}
+
 // ---------- admin auth + data (used by the admin page only) ----------
 export function adminAuth() { ready(); return auth; }
 

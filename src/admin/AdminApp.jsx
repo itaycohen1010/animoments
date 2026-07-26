@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { config } from '../config.js';
-import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, listSessions } from '../firebase.js';
+import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, listSessions, uploadToStorage } from '../firebase.js';
 
 const C = config.colors || {};
 const ACCENT = '#C4502E', INK = '#3B2A20', BODY = '#6E5240', CARD = '#fff', BG = '#FAF0E6', BORDER = '#F0D9C4';
@@ -101,6 +101,17 @@ function SettingsEditor() {
   const addFaq = () => setData((d) => ({ ...d, faq: [...(d.faq || []), { q: '', a: '' }] }));
   const delFaq = (i) => setData((d) => ({ ...d, faq: (d.faq || []).filter((_, j) => j !== i) }));
   const setSocial = (k, v) => setData((d) => ({ ...d, socialLinks: { ...(d.socialLinks || {}), [k]: v } }));
+  const setTesti = (i, v) => setData((d) => { const t = [...(d.testimonialImages || [])]; t[i] = v; return { ...d, testimonialImages: t }; });
+  const addTesti = () => setData((d) => ({ ...d, testimonialImages: [...(d.testimonialImages || []), ''] }));
+  const delTesti = (i) => setData((d) => ({ ...d, testimonialImages: (d.testimonialImages || []).filter((_, j) => j !== i) }));
+  const [uploadingTesti, setUploadingTesti] = useState(false);
+  const uploadTesti = async (file) => {
+    if (!file) return;
+    setUploadingTesti(true);
+    try { const url = await uploadToStorage(file, 'testimonials'); setData((d) => ({ ...d, testimonialImages: [...(d.testimonialImages || []), url] })); }
+    catch (e) { alert('העלאה נכשלה: ' + e.message); }
+    setUploadingTesti(false);
+  };
 
   const save = async () => {
     setBusy(true); setSaved(false);
@@ -163,6 +174,26 @@ function SettingsEditor() {
       <div style={box}>
         <h3 style={{ margin: '0 0 16px', color: INK, fontSize: '1.1rem' }}>הוכחה חברתית</h3>
         <div style={{ marginBottom: 12 }}><span style={label}>טקסט "סרטונים נוצרו" (מתחת לסרט הנע)</span><input style={inp} value={(data.socialProof || {}).stat || ''} onChange={(e) => setData((d) => ({ ...d, socialProof: { ...(d.socialProof || {}), stat: e.target.value } }))} placeholder="+300 סרטונים נוצרו" /></div>
+      </div>
+
+      <div style={box}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+          <h3 style={{ margin: 0, color: INK, fontSize: '1.1rem' }}>המלצות (תמונות וואטסאפ)</h3>
+          <div style={{ flex: 1 }} />
+          <label style={{ border: `1.5px solid ${ACCENT}`, background: ACCENT, cursor: uploadingTesti ? 'wait' : 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 13, color: '#fff', padding: '6px 14px', borderRadius: 999 }}>
+            {uploadingTesti ? 'מעלה…' : '⬆ העלאת תמונה'}
+            <input type="file" accept="image/*" onChange={(e) => { uploadTesti(e.target.files[0]); e.target.value = ''; }} style={{ display: 'none' }} />
+          </label>
+          <button onClick={addTesti} style={{ border: `1.5px solid ${ACCENT}`, background: '#fff', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 13, color: ACCENT, padding: '6px 14px', borderRadius: 999 }}>+ כתובת</button>
+        </div>
+        {(data.testimonialImages || []).length === 0 && <div style={{ color: BODY, fontSize: 13, marginBottom: 10 }}>אין תמונות — יוצג צילום ברירת המחדל. הוסיפו כתובת תמונה (Cloudinary).</div>}
+        {(data.testimonialImages || []).map((url, i) => (
+          <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+            {(url || '').trim() && <img src={url} alt="" style={{ width: 40, height: 56, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />}
+            <input style={{ ...ltrInp, flex: 1 }} placeholder="https://res.cloudinary.com/…/screenshot.jpg" value={url} onChange={(e) => setTesti(i, e.target.value)} />
+            <button onClick={() => delTesti(i)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: ACCENT, fontSize: 20 }}>×</button>
+          </div>
+        ))}
       </div>
 
       <div style={box}>

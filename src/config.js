@@ -11,10 +11,32 @@ export const config = {
     rating: '4.9',
     ratingCount: '87 ביקורות'
   },
+  // WhatsApp-style customer testimonials (editable). Each = a short chat: bubbles
+  // with side 'in' (customer, gray) or 'out' (us, green) and an optional time.
   testimonials: [
-    { name: 'מיכל ר.', text: 'הכנתי סרטון ליום הולדת 80 של סבתא — כל המשפחה בכתה מהתרגשות. פשוט מושלם.', stars: 5 },
-    { name: 'דניאל כ.', text: 'תוך פחות מיממה קיבלתי סרטון מדהים מהתמונות של הטיול. איכות ברמה אחרת.', stars: 5 },
-    { name: 'נועה ל.', text: 'חשבתי שיהיה מסובך — לקח לי חמש דקות מהטלפון. התוצאה ריגשה את כולם.', stars: 5 }
+    { name: 'מיכל', msgs: [
+      { side: 'out', text: 'קיבלת? 🙂', time: '2:31' },
+      { side: 'in', text: 'יואו!!! מדהים 🥹🥹', time: '2:33' },
+      { side: 'in', text: 'ממש התרגשתי לראות את זה! עם דמעות בעיניים', time: '2:33' },
+      { side: 'in', text: 'מקסים מקסים מקסים!!!!', time: '2:33' }
+    ] },
+    { name: 'גילעד', msgs: [
+      { side: 'in', text: 'ראה את הסרטון וגם התרגש ממה שזה חמוד', time: '7:40' },
+      { side: 'out', text: 'וואו איזה כיף לשמוע ❤️', time: '8:37' }
+    ] },
+    { name: 'נועה', msgs: [
+      { side: 'in', text: 'חשבתי שיהיה מסובך — לקח לי חמש דקות מהטלפון', time: '19:02' },
+      { side: 'in', text: 'התוצאה ריגשה את כל המשפחה 🥹', time: '19:02' }
+    ] }
+  ],
+
+  // Customer testimonial screenshots (WhatsApp images). Managed from the admin.
+  // Each entry is an image URL (host on Cloudinary). Empty = falls back to bundled sample.
+  testimonialImages: [
+    'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1785055675/WhatsApp_Image_2026-07-26_at_11.20.45_cmdezb.jpg',
+    'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1785055674/WhatsApp_Image_2026-07-26_at_11.46.03_m1bpt5.jpg',
+    'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1785055622/WhatsApp_Image_2026-07-26_at_11.01.13_vgqztx.jpg',
+    'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1785055611/e6301840-1836-45bd-8821-a364bbec5c84_o25oav.jpg'
   ],
 
   // Optional promo banner shown under the hero title (e.g. coupon announcement).
