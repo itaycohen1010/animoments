@@ -484,9 +484,9 @@ export default function App() {
 
       {/* modals */}
       {promoOpen && ((config.promoPopup || '').trim() || (config.promoImage || '').trim()) && (
-        <div onClick={() => setPromoOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(59,42,32,.55)', backdropFilter: 'blur(5px)', zIndex: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <div onClick={() => { trackClick('סגירה'); setPromoOpen(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(59,42,32,.55)', backdropFilter: 'blur(5px)', zIndex: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="מבצע" style={{ position: 'relative', background: '#fff', borderRadius: 24, maxWidth: 420, width: '100%', padding: '36px 28px 28px', textAlign: 'center', boxShadow: '0 24px 60px rgba(59,42,32,.3)', direction: 'rtl' }}>
-            <button onClick={() => setPromoOpen(false)} aria-label="סגירה" style={{ position: 'absolute', top: 12, left: 12, border: 'none', background: 'none', cursor: 'pointer', width: 34, height: 34, borderRadius: '50%', fontSize: 22, color: '#6E5240', fontFamily: "'Heebo', sans-serif", lineHeight: 1, zIndex: 2, textShadow: '0 1px 4px rgba(255,255,255,.6)' }}>×</button>
+            <button onClick={() => { trackClick('סגירה'); setPromoOpen(false); }} aria-label="סגירה" style={{ position: 'absolute', top: 12, left: 12, border: 'none', background: 'none', cursor: 'pointer', width: 34, height: 34, borderRadius: '50%', fontSize: 22, color: '#6E5240', fontFamily: "'Heebo', sans-serif", lineHeight: 1, zIndex: 2, textShadow: '0 1px 4px rgba(255,255,255,.6)' }}>×</button>
             {(config.promoImage || '').trim()
               ? <img src={config.promoImage} alt="מבצע" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: 14, margin: '6px 0 2px' }} />
               : <p style={{ color: '#4A3529', fontSize: (config.promoTextSize || 24), fontWeight: 800, lineHeight: 1.5, margin: '8px 0 4px', whiteSpace: 'pre-line', wordBreak: 'break-word' }}>{config.promoPopup}</p>}

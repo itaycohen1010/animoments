@@ -311,14 +311,14 @@ function GalleryEditor() {
 
 function MonitoringPanel() {
   const [sessions, setSessions] = useState(null);
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState('today');
   const [tab, setTab] = useState('funnel'); // funnel | leads
 
   const load = () => { setSessions(null); listSessions(1000).then(setSessions); };
   useEffect(() => { load(); }, []);
 
   const stepLabels = ['כניסה לאתר', 'בחירת תמונות', 'מילוי פרטים', 'תשלום', 'סיום ✓'];
-  const cutoff = Date.now() - days * 86400000;
+  const cutoff = days === 'today' ? new Date().setHours(0, 0, 0, 0) : Date.now() - days * 86400000;
   const toMs = (t) => (t && t.seconds ? t.seconds * 1000 : (t && t.toMillis ? t.toMillis() : 0));
   const rows = (sessions || []).filter((s) => { const t = toMs(s.startedAt); return !t || t >= cutoff; });
 
@@ -350,7 +350,7 @@ function MonitoringPanel() {
   const dayKey = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const dayMap = {};
   rows.forEach((s) => { const t = toMs(s.startedAt); if (!t) return; const k = dayKey(t); if (!dayMap[k]) dayMap[k] = { v: 0, o: 0 }; dayMap[k].v++; if (s.converted) dayMap[k].o++; });
-  const dailyDays = Math.min(days, 30);
+  const dailyDays = Math.min(days === 'today' ? 1 : days, 30);
   const daily = [];
   for (let i = dailyDays - 1; i >= 0; i--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i); const k = dayKey(d.getTime()); daily.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, ...(dayMap[k] || { v: 0, o: 0 }) }); }
   const dailyMax = Math.max(1, ...daily.map((x) => x.v));
@@ -419,7 +419,8 @@ function MonitoringPanel() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <select value={days} onChange={(e) => setDays(Number(e.target.value))} style={{ fontFamily: "'Heebo', sans-serif", fontSize: 14, padding: '8px 12px', borderRadius: 10, border: `1px solid ${BORDER}` }}>
+        <select value={days} onChange={(e) => setDays(e.target.value === 'today' ? 'today' : Number(e.target.value))} style={{ fontFamily: "'Heebo', sans-serif", fontSize: 14, padding: '8px 12px', borderRadius: 10, border: `1px solid ${BORDER}` }}>
+          <option value="today">היום</option>
           <option value={1}>24 שעות</option>
           <option value={7}>7 ימים</option>
           <option value={30}>30 יום</option>

@@ -26,6 +26,18 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 .testi-scroll:hover .testi-track, .testi-scroll:active .testi-track { animation-play-state: paused; }
 .testi-card .testi-btn { opacity: 0; transition: opacity .18s ease; }
 .testi-card:hover .testi-btn { opacity: 1; }
+.hero-thumb { transition: transform .18s ease, box-shadow .18s ease; cursor: pointer; }
+.hero-thumb:hover { transform: scale(1.08); box-shadow: 0 10px 24px rgba(59,42,32,.28); }
+.hero-reel-wrap { cursor: pointer; transition: transform .2s ease; }
+.hero-reel-wrap:hover { transform: scale(1.02); }
+@media (max-width: 640px) {
+  .hero-media { gap: 8px !important; max-width: 100% !important; padding: 0 6px !important; }
+  .hero-phone { width: 48vw !important; padding: 7px 8px !important; border-radius: 18px !important; }
+  .hero-phone > div:first-child { height: 32px !important; width: 4px !important; right: 9px !important; }
+  .hero-arrow { font-size: 18px !important; }
+  .hero-grid { gap: 5px !important; }
+  .hero-grid > div { width: 12vw !important; min-width: 44px !important; border-width: 2px !important; }
+}
 .testi-card { font-size: 0; line-height: 0; }
 .testi-card img { display: block; width: 100%; height: auto; }
 .wa-float:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(59,42,32,.22); }

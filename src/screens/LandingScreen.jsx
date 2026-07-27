@@ -5,7 +5,17 @@ import { pillBtn, smallGhostBtn } from '../styles.js';
 // Screen 0 — landing page: hero, dictionary word, filmstrip, how-it-works, pricing, closing CTA.
 export default function LandingScreen({ onStart, onOpenHow }) {
   const [lightbox, setLightbox] = useState(null); // { title, video }
-  const [zoomImg, setZoomImg] = useState(null); // testimonial zoom
+  const [zoomImg, setZoomImg] = useState(null); // testimonial / hero photo zoom
+  const [zoomVideo, setZoomVideo] = useState(false);
+  const [openPkg, setOpenPkg] = useState(null);
+  const heroPhotos = (config.heroPhotos && config.heroPhotos.length ? config.heroPhotos : [
+    'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1785129056/1_2_gheqtf.png',
+    'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1785129019/2_ykbann.png',
+    'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1785129020/3_heendd.png',
+    'https://res.cloudinary.com/dmxkoz4jo/image/upload/v1785129055/4_2_sdyqfx.png'
+  ]);
+  const heroVideo = (config.heroVideo || 'https://res.cloudinary.com/dmxkoz4jo/video/upload/f_auto,q_auto/v1785130216/herovideo_v9hg8t.mp4');
+  const heroPoster = (config.heroPoster || 'https://res.cloudinary.com/dmxkoz4jo/video/upload/so_0/v1785130216/herovideo_v9hg8t.jpg');
   const [openFaq, setOpenFaq] = useState(null);
   const faqs = (config.faq && config.faq.length ? config.faq : [
     { q: 'איך עובד תהליך יצירת הסרטון?', a: 'אתם מעלים תמונות, מסדרים אותן לפי הסדר הרצוי ומשלימים את ההזמנה. לאחר מכן, הכלים המתקדמים שלנו יחברו אותן לסרטון אנימציה זורם הכולל סאונד מותאם.' },
@@ -40,6 +50,30 @@ export default function LandingScreen({ onStart, onOpenHow }) {
           <button onClick={() => onStart()} style={{ ...pillBtn, fontSize: 19, padding: '18px 44px', animation: 'cta-pulse 2.2s ease-in-out infinite' }}>צרו סרטון עכשיו!</button>
           <div style={{ marginTop: 14 }}>
             <button onClick={() => onOpenHow(1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 600, color: C.muted, textDecoration: 'underline', textUnderlineOffset: 4 }}>לצפייה בהדגמה קצרה 👀</button>
+          </div>
+          <div className="hero-media" style={{ maxWidth: 900, margin: '34px auto 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, flexWrap: 'nowrap' }}>
+            <div className="hero-reel-wrap hero-phone" data-track="הירו וידאו" onClick={() => setZoomVideo(true)} style={{ position: 'relative', zIndex: 2, width: 'clamp(190px, 46vw, 420px)', padding: 'clamp(7px, 1.6vw, 16px) clamp(8px, 1.8vw, 18px)', background: 'linear-gradient(160deg, #2E1F17, #17120F)', borderRadius: 'clamp(18px, 3vw, 32px)', boxShadow: '0 26px 60px rgba(59,42,32,.4)', cursor: 'pointer', flexShrink: 0 }}>
+              <div style={{ position: 'absolute', top: '50%', right: 22, transform: 'translateY(-50%)', width: 6, height: 60, borderRadius: 6, background: 'rgba(255,255,255,.25)', zIndex: 3 }} />
+              <div style={{ position: 'relative', borderRadius: 22, overflow: 'hidden', background: '#000', aspectRatio: '16/9' }}>
+                <video autoPlay muted loop playsInline preload="auto" poster={heroPoster}
+                  ref={(v) => { if (v && !v._kept) { v._kept = true; v.muted = true; const play = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); }; play(); v.addEventListener('canplay', play); v.addEventListener('pause', play); v.addEventListener('ended', play); v.addEventListener('stalled', () => { try { v.load(); play(); } catch (e) {} }); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') play(); }); } }}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', pointerEvents: 'none' }}>
+                  <source src={heroVideo} type="video/mp4" />
+                </video>
+              </div>
+            </div>
+            {heroPhotos.length >= 2 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="hero-arrow" style={{ color: C.accent, flexShrink: 0, fontSize: 30, fontWeight: 900, lineHeight: 1 }}>→</div>
+                <div className="hero-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(5px, 1vw, 10px)' }}>
+                  {heroPhotos.slice(0, 4).map((ph, i) => (
+                    <div key={i} className="hero-thumb" onClick={() => setZoomImg(ph)} style={{ width: 'clamp(44px, 11vw, 92px)', borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: '0 8px 22px rgba(59,42,32,.22)', border: '3px solid #fff' }}>
+                      <img src={ph} alt="" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -127,33 +161,40 @@ export default function LandingScreen({ onStart, onOpenHow }) {
             <span key={t} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 999, padding: '7px 16px', boxShadow: '0 4px 14px rgba(180,100,70,.08)' }}>{t}</span>
           ))}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 22, alignItems: 'stretch' }}>
-          {config.packages.map((p) => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 22, alignItems: 'start' }}>
+          {config.packages.map((p) => {
+            const open = openPkg === p.key;
+            return (
             <div key={p.key} className={p.featured ? 'featured-card' : ''}
-              style={{ background: '#fff', borderRadius: 24, padding: '32px 28px', display: 'flex', flexDirection: 'column', position: 'relative',
+              onClick={() => setOpenPkg(open ? null : p.key)} data-track={'חבילה ' + p.name}
+              style={{ background: '#fff', borderRadius: 24, padding: '22px 24px', display: 'flex', flexDirection: 'column', position: 'relative', cursor: 'pointer', transition: 'box-shadow .2s ease',
                 border: p.featured ? `2.5px solid ${C.accent}` : `1.5px solid ${C.border}`,
                 transform: p.featured ? 'scale(1.04)' : 'none',
-                boxShadow: p.featured ? '0 20px 50px rgba(196,80,46,.18)' : 'none' }}>
+                boxShadow: (p.featured || open) ? '0 20px 50px rgba(196,80,46,.18)' : '0 6px 20px rgba(180,100,70,.08)' }}>
               {p.featured && (
                 <div style={{ position: 'absolute', top: -14, right: 24, background: `linear-gradient(135deg, ${C.gold}, #F2B45C)`, color: '#5C3A10', fontWeight: 800, fontSize: 13, padding: '5px 16px', borderRadius: 999, boxShadow: '0 4px 12px rgba(232,161,60,.4)' }}>הכי אהובה ❤️</div>
               )}
-              <div style={{ fontWeight: 800, fontSize: '1.15rem', marginBottom: 4 }}>{p.name}</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 18 }}>
-                {p.basePrice !== p.price && <span style={{ color: '#A78B74', fontWeight: 700, fontSize: '1.2rem', textDecoration: 'line-through' }}>₪{p.basePrice}</span>}
-                <span style={{ fontWeight: 900, fontSize: '2.4rem', color: C.accent }}>₪{p.price}</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ fontWeight: 800, fontSize: '1.2rem' }}>{p.name}</span>
+                <span style={{ color: C.accent, fontSize: 20, fontWeight: 900, transition: 'transform .2s ease', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>⌄</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, color: C.body, fontSize: '.98rem', marginBottom: 26 }}>
-                {p.features.map((f) => <span key={f}>✓ {f}</span>)}
+              <div style={{ maxHeight: open ? 400 : 0, overflow: 'hidden', transition: 'max-height .3s ease' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '16px 0 4px' }}>
+                  <span style={{ fontWeight: 900, fontSize: '2rem', color: C.accent }}>₪{p.price}</span>
+                  {p.basePrice !== p.price && <span style={{ color: '#A78B74', fontWeight: 700, fontSize: '1.1rem', textDecoration: 'line-through' }}>₪{p.basePrice}</span>}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, color: C.body, fontSize: '.98rem', margin: '14px 0 22px' }}>
+                  {p.features.map((f) => <span key={f}>✓ {f}</span>)}
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); onStart(p.key); }}
+                  style={p.featured
+                    ? { ...pillBtn, width: '100%', fontSize: 15, padding: '13px 20px' }
+                    : { border: `1.5px solid ${C.accent}`, background: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: C.accent, padding: '12px 20px', borderRadius: 999, width: '100%' }}>
+                  בחירת חבילה זו
+                </button>
               </div>
-              <div style={{ flex: 1 }} />
-              <button onClick={() => onStart(p.key)}
-                style={p.featured
-                  ? { ...pillBtn, fontSize: 15, padding: '13px 20px' }
-                  : { border: `1.5px solid ${C.accent}`, background: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: C.accent, padding: '12px 20px', borderRadius: 999 }}>
-                בחירת חבילה זו
-              </button>
             </div>
-          ))}
+          );})}
         </div>
       </div>
 
@@ -187,10 +228,17 @@ export default function LandingScreen({ onStart, onOpenHow }) {
         </div>
       </div>
 
-      {/* testimonial zoom */}
+      {/* testimonial / hero photo zoom */}
       {zoomImg && (
         <div onClick={() => setZoomImg(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(30,20,14,.85)', backdropFilter: 'blur(6px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <img src={zoomImg} alt="תגובת לקוח/ה" style={{ maxWidth: '92vw', maxHeight: '88vh', borderRadius: 18, boxShadow: '0 30px 70px rgba(0,0,0,.5)' }} />
+          <img src={zoomImg} alt="" style={{ maxWidth: '92vw', maxHeight: '88vh', borderRadius: 18, boxShadow: '0 30px 70px rgba(0,0,0,.5)' }} />
+        </div>
+      )}
+      {zoomVideo && (
+        <div onClick={() => setZoomVideo(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(30,20,14,.88)', backdropFilter: 'blur(6px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <video autoPlay muted loop playsInline controlsList="nofullscreen nodownload noplaybackrate" disablePictureInPicture style={{ maxWidth: '92vw', maxHeight: '88vh', borderRadius: 18, boxShadow: '0 30px 70px rgba(0,0,0,.5)' }}>
+            <source src={heroVideo} type="video/mp4" />
+          </video>
         </div>
       )}
 
