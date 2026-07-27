@@ -125,17 +125,35 @@ export async function listGallery() {
   if (!ready()) return [];
   try {
     const snap = await getDocs(query(collection(db, 'gallery'), limit(500)));
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    arr.sort((a, b) => {
+      const ao = a.order, bo = b.order;
+      if (ao != null && bo != null) return ao - bo;
+      if (ao != null) return -1;
+      if (bo != null) return 1;
+      return 0;
+    });
+    return arr;
   } catch (e) { console.warn('listGallery failed', e); return []; }
 }
 export async function saveGalleryItem(item) {
   if (!ready()) throw new Error('Firebase not configured');
   const id = item.id || ('g-' + Date.now() + Math.random().toString(36).slice(2, 6));
-  await setDoc(doc(collection(db, 'gallery'), id), {
+  const payload = {
     title: item.title || '', video: (item.video || '').trim(), img: (item.img || '').trim(),
+    category: (item.category || '').trim(),
     createdAt: serverTimestamp()
-  }, { merge: true });
+  };
+  if (item.order != null) payload.order = item.order;
+  await setDoc(doc(collection(db, 'gallery'), id), payload, { merge: true });
   return id;
+}
+// Persist a new order for all gallery items.
+export async function reorderGallery(ids) {
+  if (!ready()) return;
+  try {
+    await Promise.all(ids.map((id, i) => setDoc(doc(collection(db, 'gallery'), id), { order: i }, { merge: true })));
+  } catch (e) { console.warn('reorderGallery failed', e); }
 }
 export async function deleteGalleryItem(id) {
   if (!ready()) throw new Error('Firebase not configured');

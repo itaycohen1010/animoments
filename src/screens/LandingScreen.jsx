@@ -47,7 +47,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
               <span key={t} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 999, padding: '8px 18px', fontSize: 14, fontWeight: 600, color: C.body, boxShadow: '0 4px 14px rgba(180,100,70,.08)' }}>{t}</span>
             ))}
           </div>
-          <button onClick={() => onStart()} style={{ ...pillBtn, fontSize: 19, padding: '18px 44px', animation: 'cta-pulse 2.2s ease-in-out infinite' }}>צרו סרטון עכשיו!</button>
+          <button onClick={() => onStart()} data-track="צרו את הסרטון שלכם" style={{ ...pillBtn, fontSize: 19, padding: '18px 44px', animation: 'cta-pulse 2.2s ease-in-out infinite' }}>צרו את הסרטון שלכם</button>
           <div style={{ marginTop: 14 }}>
             <button onClick={() => onOpenHow(1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 600, color: C.muted, textDecoration: 'underline', textUnderlineOffset: 4 }}>לצפייה בהדגמה קצרה 👀</button>
           </div>

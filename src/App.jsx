@@ -427,7 +427,7 @@ export default function App() {
         onSection={(e, id) => { if (lookup || gallery) { e.preventDefault(); setLookup(false); setGallery(false); setStep(0); setTimeout(() => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 60); } }} />
 
       {(config.announcement || '').trim() && !lookup && !gallery && (
-        <div style={{ background: '#17120F', color: '#fff', textAlign: 'center', fontWeight: 800, fontSize: 15, padding: '11px 20px', direction: 'rtl' }}>{config.announcement}</div>
+        <div style={{ background: config.announcementBg || '#17120F', color: config.announcementColor || '#fff', textAlign: 'center', fontWeight: 800, fontSize: 15, padding: '11px 20px', direction: 'rtl' }}>{config.announcement}</div>
       )}
 
       {gallery && <GalleryScreen onHome={() => { setGallery(false); window.scrollTo(0, 0); }} />}

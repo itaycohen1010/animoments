@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { config } from '../config.js';
-import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, listSessions, uploadToStorage } from '../firebase.js';
+import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, reorderGallery, listSessions, uploadToStorage } from '../firebase.js';
 
 const C = config.colors || {};
 const ACCENT = '#C4502E', INK = '#3B2A20', BODY = '#6E5240', CARD = '#fff', BG = '#FAF0E6', BORDER = '#F0D9C4';
@@ -104,6 +104,14 @@ function SettingsEditor() {
   const setTesti = (i, v) => setData((d) => { const t = [...(d.testimonialImages || [])]; t[i] = v; return { ...d, testimonialImages: t }; });
   const addTesti = () => setData((d) => ({ ...d, testimonialImages: [...(d.testimonialImages || []), ''] }));
   const delTesti = (i) => setData((d) => ({ ...d, testimonialImages: (d.testimonialImages || []).filter((_, j) => j !== i) }));
+  const move = (key, from, to) => setData((d) => { const arr = [...(d[key] || [])]; if (to < 0 || to >= arr.length) return d; const [it] = arr.splice(from, 1); arr.splice(to, 0, it); return { ...d, [key]: arr }; });
+  const dragProps = (key, i) => ({
+    draggable: true,
+    onDragStart: (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); },
+    onDragOver: (e) => e.preventDefault(),
+    onDrop: (e) => { e.preventDefault(); const from = Number(e.dataTransfer.getData('text/plain')); if (!isNaN(from) && from !== i) move(key, from, i); }
+  });
+  const handle = <span title="גררו לשינוי סדר" style={{ cursor: 'grab', color: '#B79B85', fontSize: 18, userSelect: 'none', flexShrink: 0 }}>⠿</span>;
   const [uploadingTesti, setUploadingTesti] = useState(false);
   const uploadTesti = async (file) => {
     if (!file) return;
@@ -133,8 +141,34 @@ function SettingsEditor() {
       <div style={box}>
         <h3 style={{ margin: '0 0 16px', color: INK, fontSize: '1.1rem' }}>באנר ומבצע</h3>
         <div style={{ marginBottom: 14 }}><span style={label}>באנר עליון (ריק = מוסתר)</span><input style={inp} value={data.announcement || ''} onChange={(e) => set('announcement', e.target.value)} /></div>
-        <div style={{ marginBottom: 14 }}><span style={label}>תמונת פופאפ מבצע (URL, ריק = ללא)</span><input style={ltrInp} value={data.promoImage || ''} onChange={(e) => set('promoImage', e.target.value)} /></div>
+        <div style={{ display: 'flex', gap: 20, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div><span style={label}>צבע רקע הבאנר</span><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', maxWidth: 260 }}>{['#17120F', '#2E1F17', '#C4502E', '#A83E20', '#D96A38', '#E8A13C', '#F2B45C', '#3E6B33', '#6E5240', '#B04A2C', '#8A5A12', '#FBE4D7', '#FAF0E6', '#ffffff'].map((c) => (<button key={c} onClick={() => set('announcementBg', c)} title={c} style={{ width: 30, height: 30, borderRadius: 8, background: c, cursor: 'pointer', border: (data.announcementBg || '#17120F') === c ? '3px solid #C4502E' : '2px solid #E4C4A8' }} />))}</div></div>
+          <div><span style={label}>צבע הטקסט</span><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', maxWidth: 260 }}>{['#ffffff', '#17120F', '#3B2A20', '#FBE4D7', '#E8A13C', '#F2B45C', '#C4502E', '#6E5240'].map((c) => (<button key={c} onClick={() => set('announcementColor', c)} title={c} style={{ width: 30, height: 30, borderRadius: 8, background: c, cursor: 'pointer', border: (data.announcementColor || '#ffffff') === c ? '3px solid #C4502E' : '2px solid #E4C4A8' }} />))}</div></div>
+        </div>
+        <div style={{ display: 'flex', gap: 20, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div><span style={label}>רקע מותאם (HEX)</span><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 30, height: 30, borderRadius: 8, border: '2px solid #E4C4A8', background: data.announcementBg || '#17120F', flexShrink: 0 }} /><input style={{ ...ltrInp, width: 110 }} value={data.announcementBg || ''} onChange={(e) => set('announcementBg', e.target.value)} placeholder="#17120F" /></div></div>
+          <div><span style={label}>צבע טקסט מותאם (HEX)</span><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 30, height: 30, borderRadius: 8, border: '2px solid #E4C4A8', background: data.announcementColor || '#ffffff', flexShrink: 0 }} /><input style={{ ...ltrInp, width: 110 }} value={data.announcementColor || ''} onChange={(e) => set('announcementColor', e.target.value)} placeholder="#ffffff" /></div></div>
+        </div>
+        {(data.announcement || '').trim() && (
+          <div style={{ background: data.announcementBg || '#17120F', color: data.announcementColor || '#fff', textAlign: 'center', fontWeight: 800, fontSize: 15, padding: '11px 20px', direction: 'rtl', borderRadius: 10, marginBottom: 14 }}>{data.announcement}</div>
+        )}
+        <div style={{ marginBottom: 14 }}><span style={label}>תמונת פופאפ מבצע (URL, ריק = ללא)</span><div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>{(data.promoImage || '').trim() && <img src={data.promoImage} alt="" style={{ width: 54, height: 54, objectFit: 'cover', borderRadius: 8, border: `1px solid ${BORDER}`, flexShrink: 0 }} />}<input style={ltrInp} value={data.promoImage || ''} onChange={(e) => set('promoImage', e.target.value)} /></div></div>
         <div><span style={label}>טקסט פופאפ מבצע (אם אין תמונה)</span><textarea style={{ ...inp, minHeight: 60 }} value={data.promoPopup || ''} onChange={(e) => set('promoPopup', e.target.value)} /></div>
+      </div>
+
+      <div style={box}>
+        <h3 style={{ margin: '0 0 16px', color: INK, fontSize: '1.1rem' }}>וידאו ותמונות ראשי (Hero)</h3>
+        <div style={{ marginBottom: 14 }}><span style={label}>קישור וידאו ראשי (MP4)</span><input style={ltrInp} value={data.heroVideo || ''} onChange={(e) => set('heroVideo', e.target.value)} placeholder="https://res.cloudinary.com/…/hero.mp4" /></div>
+        <div style={{ marginBottom: 14 }}><span style={label}>תמונת פוסטר (מוצגת עד שהוידאו נטען)</span><div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>{(data.heroPoster || '').trim() && <img src={data.heroPoster} alt="" style={{ width: 72, height: 40, objectFit: 'cover', borderRadius: 6, border: `1px solid ${BORDER}`, flexShrink: 0 }} />}<input style={ltrInp} value={data.heroPoster || ''} onChange={(e) => set('heroPoster', e.target.value)} placeholder="https://…/hero.jpg" /></div></div>
+        <span style={label}>4 תמונות ליד הטלפון</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              {((data.heroPhotos || [])[i] || '').trim() && <img src={(data.heroPhotos || [])[i]} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, border: `1px solid ${BORDER}`, flexShrink: 0 }} />}
+              <input style={{ ...ltrInp, flex: 1 }} value={(data.heroPhotos || [])[i] || ''} onChange={(e) => setData((d) => { const a = [...(d.heroPhotos || ['', '', '', ''])]; while (a.length < 4) a.push(''); a[i] = e.target.value; return { ...d, heroPhotos: a }; })} placeholder={`תמונה ${i + 1} (URL)`} />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={box}>
@@ -147,9 +181,26 @@ function SettingsEditor() {
               <div><span style={label}>הנחה %</span><input type="number" style={num} value={p.discount ?? 0} onChange={(e) => setPkg(i, 'discount', Number(e.target.value))} /></div>
               <div><span style={label}>מקס׳ תמונות</span><input type="number" style={num} value={p.maxPhotos ?? ''} onChange={(e) => setPkg(i, 'maxPhotos', Number(e.target.value))} /></div>
               <div style={{ fontSize: 12, color: BODY, paddingBottom: 10 }}>key: {p.key}</div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: BODY, paddingBottom: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={!!p.featured} onChange={(e) => setData((d) => ({ ...d, packages: (d.packages || []).map((x, j) => ({ ...x, featured: j === i ? e.target.checked : (e.target.checked ? false : x.featured) })) }))} style={{ width: 18, height: 18, accentColor: ACCENT }} />
+                הכי אהובה ❤️
+              </label>
             </div>
             <span style={label}>שורות תיאור (שורה לכל שורת תכונה)</span>
             <textarea style={{ ...inp, minHeight: 72 }} value={(p.features || []).join('\n')} onChange={(e) => setPkg(i, 'features', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} />
+            <div style={{ marginTop: 10, background: '#fff', border: p.featured ? `2px solid ${ACCENT}` : `1.5px solid ${BORDER}`, borderRadius: 14, padding: '14px 16px', maxWidth: 240 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontWeight: 800, fontSize: '1.05rem', color: INK }}>{p.name || '—'}</span>
+                {p.featured && <span style={{ fontSize: 11, fontWeight: 800, color: '#5C3A10', background: 'linear-gradient(135deg,#E8A13C,#F2B45C)', borderRadius: 999, padding: '2px 8px' }}>הכי אהובה ❤️</span>}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '8px 0 6px' }}>
+                <span style={{ fontWeight: 900, fontSize: '1.6rem', color: ACCENT }}>₪{Math.round((p.price || 0) * (100 - (p.discount || 0)) / 100)}</span>
+                {p.discount ? <span style={{ color: '#A78B74', fontWeight: 700, fontSize: '.95rem', textDecoration: 'line-through' }}>₪{p.price}</span> : null}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, color: BODY, fontSize: '.85rem' }}>
+                {(p.features || []).map((f, j) => <span key={j}>✓ {f}</span>)}
+              </div>
+            </div>
           </div>
         ))}
         <div style={{ fontSize: 12, color: BODY }}>מחיר = מחיר מלא; המחיר באתר מחושב לאחר ההנחה.</div>
@@ -162,7 +213,9 @@ function SettingsEditor() {
           <button onClick={addEx} style={{ border: `1.5px solid ${ACCENT}`, background: '#fff', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 13, color: ACCENT, padding: '6px 14px', borderRadius: 999 }}>+ הוספה</button>
         </div>
         {(data.examples || []).map((ex, i) => (
-          <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', paddingBottom: 12, marginBottom: 12, borderBottom: `1px solid ${BORDER}` }}>
+          <div key={i} {...dragProps('examples', i)} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', paddingBottom: 12, marginBottom: 12, borderBottom: `1px solid ${BORDER}` }}>
+            {handle}
+            {(ex.img || '').trim() && <img src={ex.img} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: `1px solid ${BORDER}`, flexShrink: 0 }} />}
             <div><span style={label}>כותרת</span><input style={{ ...inp, width: 180 }} value={ex.title || ''} onChange={(e) => setEx(i, 'title', e.target.value)} /></div>
             <div style={{ flex: 1, minWidth: 200 }}><span style={label}>קישור וידאו</span><input style={ltrInp} value={ex.video || ''} onChange={(e) => setEx(i, 'video', e.target.value)} /></div>
             <div style={{ flex: 1, minWidth: 200 }}><span style={label}>תמונה (URL)</span><input style={ltrInp} value={ex.img || ''} onChange={(e) => setEx(i, 'img', e.target.value)} /></div>
@@ -188,7 +241,8 @@ function SettingsEditor() {
         </div>
         {(data.testimonialImages || []).length === 0 && <div style={{ color: BODY, fontSize: 13, marginBottom: 10 }}>אין תמונות — יוצג צילום ברירת המחדל. הוסיפו כתובת תמונה (Cloudinary).</div>}
         {(data.testimonialImages || []).map((url, i) => (
-          <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+          <div key={i} {...dragProps('testimonialImages', i)} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+            {handle}
             {(url || '').trim() && <img src={url} alt="" style={{ width: 40, height: 56, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />}
             <input style={{ ...ltrInp, flex: 1 }} placeholder="https://res.cloudinary.com/…/screenshot.jpg" value={url} onChange={(e) => setTesti(i, e.target.value)} />
             <button onClick={() => delTesti(i)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: ACCENT, fontSize: 20 }}>×</button>
@@ -233,10 +287,10 @@ function SettingsEditor() {
 
 function GalleryEditor() {
   const [items, setItems] = useState(null);
-  const [draft, setDraft] = useState({ title: '', video: '', img: '' });
+  const [draft, setDraft] = useState({ title: '', video: '', img: '', category: '' });
   const [busy, setBusy] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [editDraft, setEditDraft] = useState({ title: '', video: '', img: '' });
+  const [editDraft, setEditDraft] = useState({ title: '', video: '', img: '', category: '' });
 
   const load = () => listGallery().then(setItems);
   useEffect(() => { load(); }, []);
@@ -244,7 +298,7 @@ function GalleryEditor() {
   const add = async () => {
     if (!draft.title.trim() && !draft.video.trim()) return;
     setBusy(true);
-    try { await saveGalleryItem(draft); setDraft({ title: '', video: '', img: '' }); await load(); }
+    try { await saveGalleryItem(draft); setDraft({ title: '', video: '', img: '', category: '' }); await load(); }
     catch (e) { alert('שמירה נכשלה: ' + e.message); }
     finally { setBusy(false); }
   };
@@ -252,7 +306,9 @@ function GalleryEditor() {
     if (!confirm('למחוק את הסרטון מהגלריה?')) return;
     try { await deleteGalleryItem(id); await load(); } catch (e) { alert('מחיקה נכשלה: ' + e.message); }
   };
-  const startEdit = (g) => { setEditId(g.id); setEditDraft({ title: g.title || '', video: g.video || '', img: g.img || '' }); };
+  const startEdit = (g) => { setEditId(g.id); setEditDraft({ title: g.title || '', video: g.video || '', img: g.img || '', category: g.category || '' }); };
+  const dragGallery = (from, to) => { if (to < 0 || to >= items.length || from === to) return; const arr = [...items]; const [it] = arr.splice(from, 1); arr.splice(to, 0, it); setItems(arr); reorderGallery(arr.map((x) => x.id)); };
+  const gDrag = (i) => ({ draggable: true, onDragStart: (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); }, onDragOver: (e) => e.preventDefault(), onDrop: (e) => { e.preventDefault(); const f = Number(e.dataTransfer.getData('text/plain')); if (!isNaN(f)) dragGallery(f, i); } });
   const cancelEdit = () => { setEditId(null); };
   const saveEdit = async (id) => {
     setBusy(true);
@@ -273,6 +329,7 @@ function GalleryEditor() {
           <div style={{ width: 200 }}><span style={label}>כותרת</span><input style={{ ...inp, direction: 'rtl' }} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></div>
           <div style={{ flex: 1, minWidth: 220 }}><span style={label}>קישור וידאו</span><input style={{ ...inp, direction: 'ltr' }} value={draft.video} onChange={(e) => setDraft({ ...draft, video: e.target.value })} /></div>
           <div style={{ flex: 1, minWidth: 200 }}><span style={label}>תמונה (URL, אופציונלי)</span><input style={{ ...inp, direction: 'ltr' }} value={draft.img} onChange={(e) => setDraft({ ...draft, img: e.target.value })} /></div>
+          <div style={{ width: 160 }}><span style={label}>קטגוריה</span><input style={{ ...inp, direction: 'rtl' }} value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} placeholder="למשל: חתונות" /></div>
           <button onClick={add} disabled={busy} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 14, color: '#fff', background: ACCENT, padding: '10px 20px', borderRadius: 999, opacity: busy ? .6 : 1 }}>הוספה</button>
         </div>
         <div style={{ fontSize: 12, color: BODY, marginTop: 10 }}>אם לא הוזנה תמונה, נשתמש בתמונה הממוזערת של יוטיוב אוטומטית.</div>
@@ -283,19 +340,21 @@ function GalleryEditor() {
         {items === null ? <div style={{ color: BODY }}>טוען…</div>
           : items.length === 0 ? <div style={{ color: BODY }}>אין סרטונים עדיין.</div>
           : items.map((g) => (
-            <div key={g.id} style={{ display: 'flex', gap: 12, alignItems: 'center', paddingBottom: 12, marginBottom: 12, borderBottom: `1px solid ${BORDER}` }}>
+            <div key={g.id} {...gDrag(items.indexOf(g))} style={{ display: 'flex', gap: 12, alignItems: 'center', paddingBottom: 12, marginBottom: 12, borderBottom: `1px solid ${BORDER}` }}>
+              {editId !== g.id && <span title="גררו לשינוי סדר" style={{ cursor: 'grab', color: '#B79B85', fontSize: 18, userSelect: 'none', flexShrink: 0 }}>⠿</span>}
               {editId === g.id ? (
                 <>
                   <div style={{ width: 180 }}><input style={{ ...inp, direction: 'rtl' }} value={editDraft.title} onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })} placeholder="כותרת" /></div>
                   <div style={{ flex: 1, minWidth: 180 }}><input style={{ ...inp, direction: 'ltr' }} value={editDraft.video} onChange={(e) => setEditDraft({ ...editDraft, video: e.target.value })} placeholder="קישור וידאו" /></div>
                   <div style={{ flex: 1, minWidth: 160 }}><input style={{ ...inp, direction: 'ltr' }} value={editDraft.img} onChange={(e) => setEditDraft({ ...editDraft, img: e.target.value })} placeholder="תמונה (URL)" /></div>
+                  <div style={{ width: 130 }}><input style={{ ...inp, direction: 'rtl' }} value={editDraft.category} onChange={(e) => setEditDraft({ ...editDraft, category: e.target.value })} placeholder="קטגוריה" /></div>
                   <button onClick={() => saveEdit(g.id)} disabled={busy} style={{ border: 'none', background: ACCENT, cursor: 'pointer', color: '#fff', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 13, padding: '8px 16px', borderRadius: 999, opacity: busy ? .6 : 1 }}>שמירה</button>
                   <button onClick={cancelEdit} style={{ border: `1px solid ${BORDER}`, background: '#fff', cursor: 'pointer', color: BODY, fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 13, padding: '8px 14px', borderRadius: 999 }}>ביטול</button>
                 </>
               ) : (
                 <>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, color: INK, fontSize: 14 }}>{g.title || '(ללא כותרת)'}</div>
+                    <div style={{ fontWeight: 700, color: INK, fontSize: 14 }}>{g.title || '(ללא כותרת)'}{g.category ? <span style={{ marginRight: 8, fontSize: 11, fontWeight: 700, color: ACCENT, background: '#FBE4D7', borderRadius: 999, padding: '2px 8px' }}>{g.category}</span> : null}</div>
                     <div style={{ direction: 'ltr', color: BODY, fontSize: 12, wordBreak: 'break-all' }}>{g.video}</div>
                   </div>
                   <button onClick={() => startEdit(g)} style={{ border: `1px solid ${BORDER}`, background: '#fff', cursor: 'pointer', color: INK, fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 13, padding: '6px 14px', borderRadius: 999 }}>עריכה</button>
@@ -313,6 +372,7 @@ function MonitoringPanel() {
   const [sessions, setSessions] = useState(null);
   const [days, setDays] = useState('today');
   const [tab, setTab] = useState('funnel'); // funnel | leads
+  const [clickCatSel, setClickCatSel] = useState('הכול');
 
   const load = () => { setSessions(null); listSessions(1000).then(setSessions); };
   useEffect(() => { load(); }, []);
@@ -400,6 +460,45 @@ function MonitoringPanel() {
   });
   const clickRows = Object.entries(clickMap).sort((a, b) => b[1] - a[1]).slice(0, 25);
   const clickMax = Math.max(1, ...clickRows.map((c) => c[1]));
+
+  // categorize clicks by area
+  const clickCat = (raw) => {
+    const n = (raw || '').replace(/_/g, ' ');
+    if (/^▶|▶/.test(n)) return 'גלריה';
+    if (/חבילה|מחיר|בחירת חבילה/.test(n)) return 'מחירים';
+    if (/גלריה/.test(n)) return 'גלריה';
+    if (/הירו|וידאו|סרטון מרגש|צפייה|הורדת/.test(n)) return 'הסרטון שלי';
+    if (/איך זה עובד|הדגמה|דברים לבדוק|דברים שחשוב/.test(n)) return 'איך זה עובד';
+    if (/לקוח|המלצה|תגובת/.test(n)) return 'לקוחות מספרים';
+    if (/\?|שאלה|שאלות|תנאי|פרטיות|נגישות|האם|כמה תמונות|החזר/.test(n)) return 'שאלות ותשובות';
+    if (/וואטסאפ|פנו|פייסבוק|אינסטגרם|טיקטוק|יוטיוב/.test(n)) return 'רשתות ויצירת קשר';
+    if (/המשך לפרטים|בחירת תמונות|גררו|בחירה מהמכשיר|הסרה/.test(n)) return 'מסך העלאת תמונות';
+    if (/ברכה|דילוג/.test(n)) return 'מסך ברכה';
+    if (/המשך לתשלום|פרטים|שם|טלפון|אימייל/.test(n)) return 'מסך פרטים';
+    if (/תשלום|שילמתי|Grow|אישור ושליחת|קופון|החלת קוד/.test(n)) return 'מסך תשלום';
+    if (/הזמנה חדשה|סיום/.test(n)) return 'מסך סיום';
+    if (/צרו סרטון|מתחילים|העלאת תמונות/.test(n)) return 'הזמנה (CTA)';
+    if (/סגירה/.test(n)) return 'סגירת פופאפ';
+    return 'אחר';
+  };
+  const catMap = {};
+  Object.entries(clickMap).forEach(([name, c]) => { const k = clickCat(name); catMap[k] = (catMap[k] || 0) + c; });
+  const clickCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+
+  // weekday × hour heatmap (7 × 24)
+  const heat = Array.from({ length: 7 }, () => Array(24).fill(0));
+  rows.forEach((s) => { const t = toMs(s.startedAt); if (t) { const d = new Date(t); heat[d.getDay()][d.getHours()]++; } });
+  const heatMax = Math.max(1, ...heat.flat());
+
+  // donut helper — returns conic-gradient + legend data
+  const PALETTE = ['#C4502E', '#E8A13C', '#3E6B33', '#6E5240', '#D96A38', '#B04A2C', '#8A5A12', '#A83E20'];
+  const donut = (entries) => {
+    const sum = entries.reduce((a, [, v]) => a + v, 0) || 1;
+    let acc = 0;
+    const stops = entries.map(([, v], i) => { const from = acc / sum * 360; acc += v; const to = acc / sum * 360; return `${PALETTE[i % PALETTE.length]} ${from}deg ${to}deg`; });
+    return { bg: `conic-gradient(${stops.join(',')})`, sum };
+  };
+  const deviceEntries = [['נייד', mobileCount], ['מחשב', desktopCount]].filter((e) => e[1] > 0);
 
   const exportLeadsCsv = () => {
     const head = ['שם', 'טלפון', 'אימייל', 'הגיע עד', 'מכשיר', 'מקור', 'תאריך'];
@@ -519,20 +618,40 @@ function MonitoringPanel() {
           </div>
           <div style={card}>
             <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>סוג מכשיר</div>
-            {[['נייד', mobileCount], ['מחשב', desktopCount]].map(([lbl, c]) => {
-              const pct = total ? Math.round((c / total) * 100) : 0;
-              return (
-                <div key={lbl} style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+              <div style={{ width: 130, height: 130, borderRadius: '50%', background: deviceEntries.length ? donut(deviceEntries).bg : '#F3E7D8', flexShrink: 0, position: 'relative' }}>
+                <div style={{ position: 'absolute', inset: 22, borderRadius: '50%', background: CARD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: INK, fontSize: 20 }}>{total}</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[['נייד', mobileCount], ['מחשב', desktopCount]].map(([lbl, c], i) => (
+                  <div key={lbl} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+                    <span style={{ width: 14, height: 14, borderRadius: 4, background: PALETTE[i], flexShrink: 0 }} />
                     <span style={{ color: INK, fontWeight: 700 }}>{lbl}</span>
-                    <span style={{ color: BODY }}>{c} ({pct}%)</span>
+                    <span style={{ color: BODY }}>{c} ({total ? Math.round((c / total) * 100) : 0}%)</span>
                   </div>
-                  <div style={{ height: 12, background: '#F3E7D8', borderRadius: 999, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: pct + '%', background: `linear-gradient(90deg, ${ACCENT}, #D96A38)`, borderRadius: 999 }} />
-                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={card}>
+            <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>מפת חום — יום בשבוע × שעה</div>
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{ minWidth: 560 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '28px repeat(24, 1fr)', gap: 2, alignItems: 'center' }}>
+                  <div />
+                  {Array.from({ length: 24 }, (_, h) => <div key={h} style={{ fontSize: 8, color: BODY, textAlign: 'center' }}>{h % 3 === 0 ? h : ''}</div>)}
+                  {heat.map((rowH, d) => (
+                    <React.Fragment key={d}>
+                      <div style={{ fontSize: 11, color: BODY, fontWeight: 700, textAlign: 'center' }}>{dowNames[d]}</div>
+                      {rowH.map((v, h) => (
+                        <div key={h} title={`${dowNames[d]} ${h}:00 — ${v}`} style={{ aspectRatio: '1', borderRadius: 3, background: v ? `rgba(196,80,46,${0.15 + 0.85 * (v / heatMax)})` : '#F3E7D8' }} />
+                      ))}
+                    </React.Fragment>
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', fontSize: 12, color: BODY, marginTop: 10 }}>צבע כהה יותר = יותר כניסות</div>
           </div>
         </div>
       ) : tab === 'trends' ? (
@@ -554,20 +673,22 @@ function MonitoringPanel() {
           </div>
           <div style={card}>
             <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>מקורות תנועה</div>
-            {sources.length === 0 ? <div style={{ color: BODY }}>אין נתונים.</div> : sources.map(([name, c]) => {
-              const pct = total ? Math.round((c / total) * 100) : 0;
-              return (
-                <div key={name} style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-                    <span style={{ color: INK, fontWeight: 700 }}>{name}</span>
-                    <span style={{ color: BODY }}>{c} ({pct}%)</span>
-                  </div>
-                  <div style={{ height: 12, background: '#F3E7D8', borderRadius: 999, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: pct + '%', background: `linear-gradient(90deg, ${ACCENT}, #D96A38)`, borderRadius: 999 }} />
-                  </div>
+            {sources.length === 0 ? <div style={{ color: BODY }}>אין נתונים.</div> : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+                <div style={{ width: 130, height: 130, borderRadius: '50%', background: donut(sources).bg, flexShrink: 0, position: 'relative' }}>
+                  <div style={{ position: 'absolute', inset: 22, borderRadius: '50%', background: CARD }} />
                 </div>
-              );
-            })}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {sources.map(([name, c], i) => (
+                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+                      <span style={{ width: 14, height: 14, borderRadius: 4, background: PALETTE[i % PALETTE.length], flexShrink: 0 }} />
+                      <span style={{ color: INK, fontWeight: 700 }}>{name}</span>
+                      <span style={{ color: BODY }}>{c} ({total ? Math.round((c / total) * 100) : 0}%)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <div style={card}>
             <div style={{ fontWeight: 800, color: INK, marginBottom: 16 }}>כניסות לפי יום בשבוע</div>
@@ -586,20 +707,59 @@ function MonitoringPanel() {
         <div style={card}>
           <div style={{ fontWeight: 800, color: INK, marginBottom: 4 }}>איפה לוחצים באתר</div>
           <div style={{ color: BODY, fontSize: 13, marginBottom: 16 }}>הכפתורים והקישורים הכי נלחצים ({totalClicks} קליקים בסך הכול)</div>
+          {clickCats.length > 0 && (
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ fontWeight: 700, color: INK, fontSize: 13, marginBottom: 10 }}>לפי אזור בעמוד</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {clickCats.map(([name, c], i) => {
+                  const tot = clickCats.reduce((a, [, v]) => a + v, 0) || 1;
+                  const pct = Math.round((c / tot) * 100);
+                  return (
+                    <div key={name}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                        <span style={{ color: INK, fontWeight: 700 }}><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: PALETTE[i % PALETTE.length], marginLeft: 6 }} />{name}</span>
+                        <span style={{ color: BODY }}>{c} ({pct}%)</span>
+                      </div>
+                      <div style={{ height: 10, background: '#F3E7D8', borderRadius: 999, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: pct + '%', background: PALETTE[i % PALETTE.length], borderRadius: 999 }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {clickRows.length === 0 ? (
             <div style={{ color: BODY, padding: 30, textAlign: 'center' }}>אין נתוני קליקים בטווח הזמן שנבחר.</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {clickRows.map(([name, c]) => {
-                const pct = Math.round((c / clickMax) * 100);
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, background: '#F3E7D8', borderRadius: 20, padding: 4 }}>
+                {['הכול', ...clickCats.map(([n]) => n)].map((cn) => (
+                  <button key={cn} onClick={() => setClickCatSel(cn)} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 13, color: clickCatSel === cn ? '#fff' : BODY, background: clickCatSel === cn ? ACCENT : 'transparent', padding: '6px 14px', borderRadius: 999 }}>{cn}</button>
+                ))}
+              </div>
+              {(clickCatSel === 'הכול' ? clickCats.map(([n]) => n) : [clickCatSel]).map((catName, ci) => {
+                const inCat = clickRows.filter(([n]) => clickCat(n) === catName);
+                if (!inCat.length) return null;
+                const color = PALETTE[(clickCats.findIndex(([n]) => n === catName)) % PALETTE.length];
                 return (
-                  <div key={name}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-                      <span style={{ color: INK, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '75%' }}>{name}</span>
-                      <span style={{ color: BODY }}>{c}</span>
-                    </div>
-                    <div style={{ height: 12, background: '#F3E7D8', borderRadius: 999, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: pct + '%', background: `linear-gradient(90deg, ${ACCENT}, #D96A38)`, borderRadius: 999 }} />
+                  <div key={catName}>
+                    <div style={{ fontWeight: 800, color: INK, fontSize: 13, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />{catName}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 16 }}>
+                      {inCat.map(([name, c]) => {
+                        const pct = Math.round((c / clickMax) * 100);
+                        return (
+                          <div key={name}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                              <span style={{ color: INK, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '75%' }}>{name}</span>
+                              <span style={{ color: BODY }}>{c}</span>
+                            </div>
+                            <div style={{ height: 12, background: '#F3E7D8', borderRadius: 999, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: pct + '%', background: color, borderRadius: 999 }} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -629,7 +789,7 @@ function Dashboard() {
   const shown = (orders || []).filter((o) => filter === 'all' || (o.status || 'new') === filter);
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, direction: 'rtl', padding: '20px 16px 60px' }}>
+    <div style={{ minHeight: '100vh', background: BG, direction: 'rtl', padding: '20px 12px 60px', boxSizing: 'border-box', overflowX: 'hidden' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <h1 style={{ fontWeight: 800, fontSize: '1.5rem', color: INK, margin: 0 }}>ניהול</h1>

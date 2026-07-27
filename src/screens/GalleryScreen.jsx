@@ -6,8 +6,12 @@ import { fetchGallery } from '../firebase.js';
 export default function GalleryScreen({ onHome }) {
   const [items, setItems] = useState(null);
   const [lightbox, setLightbox] = useState(null); // { title, video }
+  const [cat, setCat] = useState('הכול');
 
   useEffect(() => { fetchGallery().then(setItems); }, []);
+
+  const cats = ['הכול', ...Array.from(new Set((items || []).map((x) => (x.category || '').trim()).filter(Boolean)))];
+  const shown = (items || []).filter((x) => cat === 'הכול' || (x.category || '').trim() === cat);
 
   const playerEl = (url) => {
     const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
@@ -29,15 +33,23 @@ export default function GalleryScreen({ onHome }) {
           <button onClick={onHome} style={{ border: `1.5px solid ${C.border}`, background: '#fff', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 15, color: C.body, padding: '10px 22px', borderRadius: 999 }}>חזרה למסך הבית</button>
         </div>
         <h1 style={{ fontWeight: 900, fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', textAlign: 'center', margin: '0 0 8px', color: C.ink }}>גלריית הסרטונים</h1>
-        <p style={{ textAlign: 'center', color: C.body, fontSize: '1.05rem', margin: '0 0 40px' }}>הצצה לסרטונים שיצרנו — לחצו כדי לצפות.</p>
+        <p style={{ textAlign: 'center', color: C.body, fontSize: '1.05rem', margin: '0 0 24px' }}>הצצה לסרטונים שיצרנו — לחצו כדי לצפות.</p>
+
+        {cats.length > 1 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', margin: '0 0 32px' }}>
+            {cats.map((c) => (
+              <button key={c} onClick={() => setCat(c)} style={{ border: `1.5px solid ${cat === c ? C.accent : C.border}`, background: cat === c ? C.accent : '#fff', color: cat === c ? '#fff' : C.body, cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, padding: '7px 18px', borderRadius: 999 }}>{c}</button>
+            ))}
+          </div>
+        )}
 
         {items === null ? (
           <div style={{ textAlign: 'center', color: C.muted, padding: 40 }}>טוען…</div>
-        ) : items.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div style={{ textAlign: 'center', color: C.muted, padding: 40 }}>בקרוב יתווספו כאן סרטונים.</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20 }}>
-            {items.map((ex) => {
+            {shown.map((ex) => {
               const thumb = ex.img || ytThumb(ex.video);
               return (
                 <a key={ex.id} onClick={() => setLightbox({ title: ex.title, video: (ex.video || '').trim() })}
