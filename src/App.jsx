@@ -99,6 +99,7 @@ export default function App() {
     const onClick = (e) => {
       const el = e.target && e.target.closest && e.target.closest('a,button,[data-track]');
       if (!el) return; // only count meaningful clicks (buttons / links)
+      if (el.getAttribute('data-open') === '1') return; // closing an open folder — don't count
       if (!active) { active = true; }
       const name = el.getAttribute('data-track') || el.getAttribute('aria-label') || (el.textContent || '').trim().slice(0, 30) || el.tagName.toLowerCase();
       trackClick(name);

@@ -64,7 +64,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
           </div>
           <button onClick={() => onStart()} data-track="צרו את הסרטון שלכם" style={{ ...pillBtn, fontSize: 19, padding: '18px 44px', animation: 'cta-pulse 2.2s ease-in-out infinite' }}>צרו את הסרטון שלכם</button>
           <div style={{ marginTop: 14 }}>
-            <button onClick={() => onOpenHow(1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 600, color: C.muted, textDecoration: 'underline', textUnderlineOffset: 4 }}>לצפייה בהדגמה קצרה 👀</button>
+            <button onClick={() => onOpenHow(1)} data-track="צפייה בהדגמה" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 600, color: C.muted, textDecoration: 'underline', textUnderlineOffset: 4 }}>לצפייה בהדגמה קצרה 👀</button>
           </div>
           <div className="hero-media" style={{ maxWidth: 900, margin: '34px auto 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, flexWrap: 'nowrap' }}>
             <div className="hero-reel-wrap hero-phone" data-track="הירו וידאו" onClick={() => setZoomVideo(true)} style={{ position: 'relative', zIndex: 2, width: 'clamp(190px, 46vw, 420px)', padding: 'clamp(7px, 1.6vw, 16px) clamp(8px, 1.8vw, 18px)', background: 'linear-gradient(160deg, #2E1F17, #17120F)', borderRadius: 'clamp(18px, 3vw, 32px)', boxShadow: '0 26px 60px rgba(59,42,32,.4)', cursor: 'pointer', flexShrink: 0 }}>
@@ -145,7 +145,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
           ))}
         </div>
         <div style={{ textAlign: 'center', marginTop: 26 }}>
-          <button onClick={() => onOpenHow(1)} style={{ ...smallGhostBtn, fontSize: 15, padding: '11px 26px' }}>לצפייה בהדגמה קצרה 👀</button>
+          <button onClick={() => onOpenHow(1)} data-track="צפייה בהדגמה" style={{ ...smallGhostBtn, fontSize: 15, padding: '11px 26px' }}>לצפייה בהדגמה קצרה 👀</button>
         </div>
       </div>
 
@@ -182,7 +182,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
             const open = openPkg === p.key;
             return (
             <div key={p.key} className={p.featured ? 'featured-card' : ''}
-              onClick={() => setOpenPkg(open ? null : p.key)} data-track={'חבילה ' + p.name}
+              onClick={() => setOpenPkg(open ? null : p.key)} data-track={'חבילה ' + p.name} data-open={open ? '1' : '0'}
               style={{ background: '#fff', borderRadius: 24, padding: '22px 24px', display: 'flex', flexDirection: 'column', position: 'relative', cursor: 'pointer', transition: 'box-shadow .2s ease',
                 border: p.featured ? `2.5px solid ${C.accent}` : `1.5px solid ${C.border}`,
                 transform: p.featured ? 'scale(1.04)' : 'none',
@@ -202,7 +202,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, color: C.body, fontSize: '.98rem', margin: '14px 0 22px' }}>
                   {p.features.map((f) => <span key={f}>✓ {f}</span>)}
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); onStart(p.key); }}
+                <button onClick={(e) => { e.stopPropagation(); onStart(p.key); }} data-track={'בחירת חבילה בכרטיס — ' + p.name}
                   style={p.featured
                     ? { ...pillBtn, width: '100%', fontSize: 15, padding: '13px 20px' }
                     : { border: `1.5px solid ${C.accent}`, background: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: C.accent, padding: '12px 20px', borderRadius: 999, width: '100%' }}>
@@ -228,7 +228,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
       <div style={{ margin: '60px 0 0', background: `linear-gradient(135deg, #B04A2C, ${C.accent} 55%, #D9822E)`, padding: '76px 24px', textAlign: 'center' }}>
         <h2 style={{ fontWeight: 900, fontSize: 'clamp(2rem, 5vw, 3rem)', lineHeight: 1.2, color: '#fff', margin: '0 0 10px', letterSpacing: '-0.01em' }}>מוכנים להתחיל?</h2>
         <p style={{ color: '#FFE9D6', fontSize: '1.1rem', margin: '0 0 34px' }}>כל התהליך לוקח כחמש דקות.</p>
-        <button onClick={() => onStart()} style={{ border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 18, color: C.accent, background: '#fff', padding: '17px 46px', borderRadius: 999, boxShadow: '0 12px 30px rgba(59,42,32,.3)' }}>העלאת תמונות</button>
+        <button onClick={() => onStart()} data-track="CTA סיום — מוכנים להתחיל" style={{ border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 18, color: C.accent, background: '#fff', padding: '17px 46px', borderRadius: 999, boxShadow: '0 12px 30px rgba(59,42,32,.3)' }}>העלאת תמונות</button>
       </div>
 
       {/* FAQ accordion */}
@@ -239,7 +239,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {faqs.map((f, i) => (
               <div key={i} style={{ background: '#fff', border: '1px solid #F0D9C4', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 14px rgba(180,100,70,.06)' }}>
-                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 22px', textAlign: 'right', direction: 'rtl' }}>
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} data-open={openFaq === i ? '1' : '0'} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 22px', textAlign: 'right', direction: 'rtl' }}>
                   <span style={{ fontWeight: 800, fontSize: '1.05rem', color: C.ink }}>{f.q}</span>
                   <span style={{ flexShrink: 0, width: 28, height: 28, borderRadius: '50%', background: '#FBE4D7', color: C.accent, fontWeight: 900, fontSize: 20, lineHeight: '26px', textAlign: 'center' }}>{openFaq === i ? '−' : '+'}</span>
                 </button>

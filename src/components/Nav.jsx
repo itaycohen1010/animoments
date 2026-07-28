@@ -24,7 +24,7 @@ export default function Nav({ step, journeyPct, journeyLabel, onHome, onStart, o
               <a href="#pricing" onClick={(e) => onSection(e, 'pricing')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>מחירים</a>
               <a href="#faq" onClick={(e) => onSection(e, 'faq')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>שאלות ותשובות</a>
             </div>
-            <button className="nav-cta" onClick={onStart} style={{ border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: '#fff', background: C.accent, padding: '10px 22px', borderRadius: 999, boxShadow: '0 6px 16px rgba(196,80,46,.28)', whiteSpace: 'nowrap' }}>מתחילים</button>
+            <button className="nav-cta" onClick={onStart} data-track="CTA נאב — התחלה" style={{ border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: '#fff', background: C.accent, padding: '10px 22px', borderRadius: 999, boxShadow: '0 6px 16px rgba(196,80,46,.28)', whiteSpace: 'nowrap' }}>מתחילים</button>
           </>
         )}
       </div>
