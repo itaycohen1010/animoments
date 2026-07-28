@@ -266,6 +266,31 @@ export async function saveQuote(q) {
   });
   return id;
 }
+// Save a lead the moment the customer submits full contact details (before payment).
+// Keyed by orderId so it upgrades to converted:true if they pay.
+export async function saveLead(lead) {
+  if (!ready()) return;
+  try {
+    await setDoc(doc(collection(db, 'leads'), lead.orderId || ('l-' + Date.now())), {
+      orderId: lead.orderId || '',
+      customerId: getCustomerId(),
+      name: (lead.name || '').slice(0, 80),
+      phone: (lead.phone || '').slice(0, 40),
+      email: (lead.email || '').slice(0, 120),
+      packageId: lead.packageKey || '',
+      price: lead.price ?? null,
+      photoCount: lead.photoCount ?? null,
+      converted: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (e) { console.warn('saveLead failed', e); }
+}
+export async function markLeadConverted(orderId) {
+  if (!ready() || !orderId) return;
+  try { await setDoc(doc(collection(db, 'leads'), orderId), { converted: true, convertedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }); } catch (e) { /* silent */ }
+}
+
 export async function listQuotes(max = 500) {
   if (!ready()) return [];
   try {
@@ -292,9 +317,12 @@ export async function saveOrder(order) {
       musicMood: order.mood || '',
       blessing: order.blessing || '',
       folder: order.folder || '',
-      status: 'new',
-      createdAt: serverTimestamp()
-    });
+      price: order.price ?? null,
+      photoCount: order.photoCount ?? null,
+      status: order.status || 'new',
+      updatedAt: serverTimestamp(),
+      ...(order.status === 'pending' ? { createdAt: serverTimestamp() } : { paidAt: serverTimestamp() })
+    }, { merge: true });
   } catch (e) {
     console.warn('saveOrder failed', e);
   }

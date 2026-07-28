@@ -9,7 +9,7 @@ import { pillBtn, ghostBtn, inputStyle } from '../styles.js';
 //    poll /api/payment-status until the webhook confirms — then auto-continue.
 // 2. Grow hosted link (config.growLinks[pkg.key]): open fixed page, self-confirm.
 // 3. Neither configured: demo card form.
-export default function PaymentScreen({ pkg, photoCount, form, card, setCard, payError, setPayError, onConfirm, onBack, reportPaidPrice }) {
+export default function PaymentScreen({ pkg, photoCount, form, card, setCard, payError, setPayError, onConfirm, onBack, reportPaidPrice, onPaymentStart }) {
   const makeWebhook = (config.growMakeWebhook || '').trim();
   const growApiBase = (config.growApiBase || '').trim().replace(/\/$/, '');
   const growLink = (config.growLinks?.[pkg.key] || '').trim();
@@ -188,7 +188,7 @@ export default function PaymentScreen({ pkg, photoCount, form, card, setCard, pa
         ) : growLink ? (
           <>
             <p style={{ color: C.body, fontSize: '.93rem', lineHeight: 1.7, margin: '0 0 16px' }}>התשלום מתבצע בדף מאובטח של Grow. לאחר תשלום מוצלח נחזיר אתכם לכאן אוטומטית והתמונות יישלחו — אין צורך ללחוץ על דבר.</p>
-            <button onClick={() => { window.open(growLink, 'growpay'); setGrowOpened(true); }}
+            <button onClick={() => { window.open(growLink, 'growpay'); setGrowOpened(true); onPaymentStart && onPaymentStart(); }}
               style={{ ...pillBtn, width: '100%', padding: '15px 20px' }}>מעבר לתשלום ₪{payPrice} ב-Grow</button>
             {growOpened && (
               <>

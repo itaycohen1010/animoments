@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { config, colors as C } from './config.js';
 import { legalDocs } from './legal.js';
-import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, markConverted, markGalleryView, trackHeartbeat, trackClick, flushClicks, trackScroll } from './firebase.js';
+import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, saveLead, markLeadConverted, markConverted, markGalleryView, trackHeartbeat, trackClick, flushClicks, trackScroll } from './firebase.js';
 
 import Nav from './components/Nav.jsx';
 import Footer from './components/Footer.jsx';
@@ -246,6 +246,7 @@ export default function App() {
     const err = validateDetails();
     if (err) { setFormError(err); return; }
     trackLead({ name: form.name, phone: form.phone, email: form.email });
+    saveLead({ orderId: getOrderId(), name: form.name, phone: form.phone, email: form.email, packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price, photoCount: photos.length });
     setStep(3); // details → payment
   };
 
@@ -280,18 +281,29 @@ export default function App() {
 
   // ---------- firestore ----------
   const orderSavedRef = useRef(false);
-  const saveOrderOnce = () => {
-    if (orderSavedRef.current) return;
-    orderSavedRef.current = true;
+  const orderFolder = () => {
     const name = (form.name.trim() || 'ללא-שם').replace(/\s+/g, '-');
     const d = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     const stamp = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
-    const folder = uploadFolderRef.current || `video-orders/${getOrderId()}_${name}-${stamp}${mood ? '_' + mood.replace(/\s+/g, '-') : ''}`;
+    return uploadFolderRef.current || `video-orders/${getOrderId()}_${name}-${stamp}${mood ? '_' + mood.replace(/\s+/g, '-') : ''}`;
+  };
+  // Save the order the MOMENT payment starts, as "pending" — so the buyer's details
+  // are never lost even if the Grow return signal fails to come back.
+  const savePendingOrder = () => {
     saveOrder({
       orderId: getOrderId(), name: form.name.trim(), phone: form.phone.trim(), email: form.email.trim(),
       packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price,
-      photoCount: photos.length, mood, blessing: (form.blessing || ''), folder
+      photoCount: photos.length, mood, blessing: (form.blessing || ''), folder: orderFolder(), status: 'pending'
+    });
+  };
+  const saveOrderOnce = () => {
+    if (orderSavedRef.current) return;
+    orderSavedRef.current = true;
+    saveOrder({
+      orderId: getOrderId(), name: form.name.trim(), phone: form.phone.trim(), email: form.email.trim(),
+      packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price,
+      photoCount: photos.length, mood, blessing: (form.blessing || ''), folder: orderFolder(), status: 'paid'
     });
   };
 
@@ -302,6 +314,7 @@ export default function App() {
     sendConfirmationEmail();
     saveOrderOnce();
     markConverted(orderIdRef.current);
+    markLeadConverted(getOrderId());
     setStep(4); setResult('processing'); setUploadedCount(0);
     if (!cloudinaryConfigured) {
       // demo mode
@@ -436,7 +449,7 @@ export default function App() {
         const hasAnn = (config.announcement || '').trim();
         const dl = (config.promoDeadline || '').trim() ? new Date(config.promoDeadline).getTime() : 0;
         const rem = dl ? dl - nowTick : 0;
-        const showTimer = dl && rem > 0;
+        const showTimer = !!(dl && rem > 0);
         if ((!hasAnn && !showTimer) || lookup || gallery) return null;
         let cd = '';
         if (showTimer) {
@@ -480,6 +493,7 @@ export default function App() {
       {step === 3 && (
         <PaymentScreen pkg={pkg} photoCount={photos.length} form={form} reportPaidPrice={(v) => { paidPriceRef.current = v; }}
           card={card} setCard={setCard} payError={payError} setPayError={setPayError}
+          onPaymentStart={savePendingOrder}
           onConfirm={confirmPayment} onBack={() => { setStep(2); setPayError(null); }} />
       )}
 

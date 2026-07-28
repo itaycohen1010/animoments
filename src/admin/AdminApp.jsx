@@ -418,6 +418,42 @@ function QuotesPanel() {
 
 function QuotesPanelPlaceholder() { return null; }
 
+function LeadsPanel() {
+  const [items, setItems] = useState(null);
+  const [filter, setFilter] = useState('all'); // all | notpaid | paid
+  useEffect(() => { listLeads(500).then(setItems); }, []);
+  const toMs = (t) => (t && t.seconds ? t.seconds * 1000 : 0);
+  const card = { background: CARD, borderRadius: 16, padding: '16px 20px', boxShadow: '0 14px 40px rgba(180,100,70,.12)', marginBottom: 12, textAlign: 'right' };
+  if (items === null) return <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>טוען…</div>;
+  const shown = items.filter((l) => filter === 'all' || (filter === 'paid' ? l.converted : !l.converted));
+  return (
+    <div style={{ maxWidth: 820, margin: '0 auto' }}>
+      <div style={{ display: 'flex', gap: 6, background: '#F3E7D8', borderRadius: 999, padding: 4, width: 'fit-content', margin: '0 auto 16px' }}>
+        {[['all', 'הכול'], ['notpaid', 'לא שילמו'], ['paid', 'שילמו']].map(([k, lbl]) => (
+          <button key={k} onClick={() => setFilter(k)} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: filter === k ? '#fff' : BODY, background: filter === k ? ACCENT : 'transparent', padding: '7px 16px', borderRadius: 999 }}>{lbl}</button>
+        ))}
+      </div>
+      {!shown.length ? <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>אין לידים בטווח שנבחר.</div> : shown.map((l) => (
+        <div key={l.id} style={{ ...card, border: l.converted ? '1.5px solid #BFDCB4' : `1.5px solid ${BORDER}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+            <span style={{ fontWeight: 800, color: INK, fontSize: 16 }}>{l.name || '(ללא שם)'}{l.converted
+              ? <span style={{ marginRight: 8, fontSize: 11, fontWeight: 700, color: '#3E6B33', background: '#EDF5EA', borderRadius: 999, padding: '2px 10px' }}>שילם/ה ✓</span>
+              : <span style={{ marginRight: 8, fontSize: 11, fontWeight: 700, color: '#A83E20', background: '#FBE4D7', borderRadius: 999, padding: '2px 10px' }}>לא שילם/ה</span>}</span>
+            <span style={{ color: BODY, fontSize: 12 }}>{toMs(l.createdAt) ? new Date(toMs(l.createdAt)).toLocaleString('he-IL') : ''}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', color: BODY, fontSize: 14 }}>
+            <a href={`tel:${l.phone}`} dir="ltr" style={{ color: ACCENT, fontWeight: 700 }}>{l.phone}</a>
+            {l.email && <a href={`mailto:${l.email}`} dir="ltr" style={{ color: ACCENT }}>{l.email}</a>}
+            {l.packageId && <span>חבילה: {l.packageId}</span>}
+            {l.price != null && <span>₪{l.price}</span>}
+            <span style={{ color: '#B79B85' }}>{l.orderId}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MonitoringPanel() {
   const [sessions, setSessions] = useState(null);
   const [dailyDocs, setDailyDocs] = useState([]);
@@ -634,7 +670,6 @@ function MonitoringPanel() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, background: '#F3E7D8', borderRadius: 20, padding: 4 }}>
         <button onClick={() => setTab('funnel')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'funnel' ? '#fff' : BODY, background: tab === 'funnel' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>משפך המרה</button>
-        <button onClick={() => setTab('leads')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'leads' ? '#fff' : BODY, background: tab === 'leads' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>לידים ({leads.length})</button>
         <button onClick={() => setTab('hours')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'hours' ? '#fff' : BODY, background: tab === 'hours' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>שעות ומכשירים</button>
         <button onClick={() => setTab('trends')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'trends' ? '#fff' : BODY, background: tab === 'trends' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>מגמות ומקורות</button>
         <button onClick={() => setTab('clicks')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'clicks' ? '#fff' : BODY, background: tab === 'clicks' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>איפה לוחצים</button>
@@ -885,7 +920,7 @@ function Dashboard() {
             <button onClick={() => setTab('settings')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'settings' ? '#fff' : BODY, background: tab === 'settings' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>הגדרות האתר</button>
             <button onClick={() => setTab('gallery')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'gallery' ? '#fff' : BODY, background: tab === 'gallery' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>גלריה</button>
             <button onClick={() => setTab('monitoring')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'monitoring' ? '#fff' : BODY, background: tab === 'monitoring' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>מעקב</button>
-            <button onClick={() => setTab('quotes')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'quotes' ? '#fff' : BODY, background: tab === 'quotes' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>הצעות מחיר</button>
+            <button onClick={() => setTab('leads')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'leads' ? '#fff' : BODY, background: tab === 'leads' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>לידים</button>
           </div>
           <div style={{ flex: 1 }} />
           {tab === 'orders' && <select value={filter} onChange={(e) => setFilter(e.target.value)} style={{ fontFamily: "'Heebo', sans-serif", fontSize: 14, padding: '8px 12px', borderRadius: 10, border: `1px solid ${BORDER}` }}>
@@ -896,7 +931,7 @@ function Dashboard() {
           <button onClick={() => adminLogout()} style={{ border: 'none', background: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: BODY }}>יציאה</button>
         </div>
 
-        {tab === 'settings' ? <SettingsEditor /> : tab === 'gallery' ? <GalleryEditor /> : tab === 'monitoring' ? <MonitoringPanel /> : tab === 'quotes' ? <QuotesPanel /> : (
+        {tab === 'settings' ? <SettingsEditor /> : tab === 'gallery' ? <GalleryEditor /> : tab === 'monitoring' ? <MonitoringPanel /> : tab === 'leads' ? <LeadsPanel /> : (
           orders === null ? (
             <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>טוען…</div>
           ) : shown.length === 0 ? (
