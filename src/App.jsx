@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { config, colors as C } from './config.js';
 import { legalDocs } from './legal.js';
-import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, markConverted, markGalleryView, trackHeartbeat, trackClick, trackScroll } from './firebase.js';
+import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, markConverted, markGalleryView, trackHeartbeat, trackClick, flushClicks, trackScroll } from './firebase.js';
 
 import Nav from './components/Nav.jsx';
 import Footer from './components/Footer.jsx';
@@ -27,6 +27,8 @@ export default function App() {
   const defaultPkg = config.packages.find((p) => p.key === config.defaultPackageKey) || config.packages[1];
 
   const [step, setStep] = useState(0);
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNowTick(Date.now()), 1000); return () => clearInterval(t); }, []);
   const [pkgKey, setPkgKey] = useState(defaultPkg.key);
   const [photos, setPhotos] = useState([]);          // {id, url, file}
   const [dragIndex, setDragIndex] = useState(null);
@@ -108,7 +110,11 @@ export default function App() {
     const onHide = () => { if (document.visibilityState === 'hidden') trackHeartbeat(); };
     document.addEventListener('visibilitychange', onHide);
     window.addEventListener('pagehide', trackHeartbeat);
-    return () => { document.removeEventListener('click', onClick, true); clearTimeout(idleTimer); document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', trackHeartbeat); };
+    const flushTimer = setInterval(flushClicks, 20000);
+    const onHideFlush = () => { if (document.visibilityState === 'hidden') flushClicks(); };
+    document.addEventListener('visibilitychange', onHideFlush);
+    window.addEventListener('pagehide', flushClicks);
+    return () => { document.removeEventListener('click', onClick, true); clearTimeout(idleTimer); clearInterval(flushTimer); document.removeEventListener('visibilitychange', onHide); document.removeEventListener('visibilitychange', onHideFlush); window.removeEventListener('pagehide', trackHeartbeat); window.removeEventListener('pagehide', flushClicks); };
   }, []);
 
   const tipsShownRef = useRef(false);
@@ -426,9 +432,26 @@ export default function App() {
         onGallery={() => { setGallery(true); setLookup(false); setStep(0); markGalleryView(); }} gallery={gallery}
         onSection={(e, id) => { if (lookup || gallery) { e.preventDefault(); setLookup(false); setGallery(false); setStep(0); setTimeout(() => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 60); } }} />
 
-      {(config.announcement || '').trim() && !lookup && !gallery && (
-        <div style={{ background: config.announcementBg || '#17120F', color: config.announcementColor || '#fff', textAlign: 'center', fontWeight: 800, fontSize: 15, padding: '11px 20px', direction: 'rtl' }}>{config.announcement}</div>
-      )}
+      {(() => {
+        const hasAnn = (config.announcement || '').trim();
+        const dl = (config.promoDeadline || '').trim() ? new Date(config.promoDeadline).getTime() : 0;
+        const rem = dl ? dl - nowTick : 0;
+        const showTimer = dl && rem > 0;
+        if ((!hasAnn && !showTimer) || lookup || gallery) return null;
+        let cd = '';
+        if (showTimer) {
+          const s = Math.floor(rem / 1000);
+          const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+          const p = (n) => String(n).padStart(2, '0');
+          cd = d > 0 ? `${d} ימים ${p(h)}:${p(m)}:${p(ss)}` : `${p(h)}:${p(m)}:${p(ss)}`;
+        }
+        return (
+          <div style={{ background: config.announcementBg || '#17120F', color: config.announcementColor || '#fff', textAlign: 'center', fontWeight: 800, fontSize: 15, padding: '11px 20px', direction: 'rtl', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {hasAnn && <span>{config.announcement}</span>}
+            {showTimer && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,255,255,.22)', borderRadius: 999, padding: '5px 16px', fontVariantNumeric: 'tabular-nums', letterSpacing: '.5px', fontWeight: 900, fontSize: 17, boxShadow: '0 0 0 1px rgba(255,255,255,.25) inset', animation: 'timer-pulse 1.6s ease-in-out infinite' }}><span style={{ display: 'inline-block', animation: 'clock-tick 1s steps(2) infinite' }}>⏳</span> {cd}</span>}
+          </div>
+        );
+      })()}
 
       {gallery && <GalleryScreen onHome={() => { setGallery(false); window.scrollTo(0, 0); }} />}
       {lookup && <LookupScreen onHome={() => { setLookup(false); window.scrollTo(0, 0); }} />}

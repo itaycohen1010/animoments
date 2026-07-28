@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { config } from '../config.js';
-import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, reorderGallery, listSessions, uploadToStorage } from '../firebase.js';
+import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, reorderGallery, listSessions, listDailyStats, listLeads, rollupOldSessions, listQuotes, setQuoteSent, uploadToStorage } from '../firebase.js';
 
 const C = config.colors || {};
 const ACCENT = '#C4502E', INK = '#3B2A20', BODY = '#6E5240', CARD = '#fff', BG = '#FAF0E6', BORDER = '#F0D9C4';
@@ -149,8 +149,21 @@ function SettingsEditor() {
           <div><span style={label}>רקע מותאם (HEX)</span><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 30, height: 30, borderRadius: 8, border: '2px solid #E4C4A8', background: data.announcementBg || '#17120F', flexShrink: 0 }} /><input style={{ ...ltrInp, width: 110 }} value={data.announcementBg || ''} onChange={(e) => set('announcementBg', e.target.value)} placeholder="#17120F" /></div></div>
           <div><span style={label}>צבע טקסט מותאם (HEX)</span><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 30, height: 30, borderRadius: 8, border: '2px solid #E4C4A8', background: data.announcementColor || '#ffffff', flexShrink: 0 }} /><input style={{ ...ltrInp, width: 110 }} value={data.announcementColor || ''} onChange={(e) => set('announcementColor', e.target.value)} placeholder="#ffffff" /></div></div>
         </div>
-        {(data.announcement || '').trim() && (
-          <div style={{ background: data.announcementBg || '#17120F', color: data.announcementColor || '#fff', textAlign: 'center', fontWeight: 800, fontSize: 15, padding: '11px 20px', direction: 'rtl', borderRadius: 10, marginBottom: 14 }}>{data.announcement}</div>
+        <div style={{ marginBottom: 14 }}><span style={label}>טיימר ספירה לאחור (תאריך ושעת סיום — ריק = ללא)</span><input type="datetime-local" style={{ ...inp, direction: 'ltr', maxWidth: 260 }} value={data.promoDeadline || ''} onChange={(e) => set('promoDeadline', e.target.value)} /><div style={{ fontSize: 12, color: BODY, marginTop: 4 }}>יוצג בבאנר העליון עם ספירה חיה. נעלם אוטומטית כשמסתיים.</div></div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, cursor: 'pointer' }}><input type="checkbox" checked={!!data.promoTimerOnCards} onChange={(e) => set('promoTimerOnCards', e.target.checked)} style={{ width: 18, height: 18, accentColor: ACCENT }} /><span style={{ fontSize: 14, color: INK, fontWeight: 700 }}>הצגת הטיימר גם מעל כרטיסי המחיר</span></label>
+        <div style={{ marginBottom: 14 }}><span style={label}>תווית מבצע ליד טיימר המחירים (טקסט חופשי, אופציונלי)</span><input style={inp} value={data.promoCardLabel || ''} onChange={(e) => set('promoCardLabel', e.target.value)} placeholder="למשל: 🔥 מבצע השקה" /></div>
+        <div style={{ display: 'flex', gap: 20, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div><span style={label}>צבע רקע טיימר המחירים</span><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 30, height: 30, borderRadius: 8, border: '2px solid #E4C4A8', background: data.promoCardBg || '#C4502E', flexShrink: 0 }} /><input style={{ ...ltrInp, width: 110 }} value={data.promoCardBg || ''} onChange={(e) => set('promoCardBg', e.target.value)} placeholder="#C4502E" /></div></div>
+          <div><span style={label}>צבע טקסט טיימר המחירים</span><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 30, height: 30, borderRadius: 8, border: '2px solid #E4C4A8', background: data.promoCardColor || '#ffffff', flexShrink: 0 }} /><input style={{ ...ltrInp, width: 110 }} value={data.promoCardColor || ''} onChange={(e) => set('promoCardColor', e.target.value)} placeholder="#ffffff" /></div></div>
+        </div>
+        {(data.promoDeadline || '').trim() && data.promoTimerOnCards && (
+          <div style={{ textAlign: 'center', marginBottom: 4 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: data.promoCardBg || '#C4502E', color: data.promoCardColor || '#fff', borderRadius: 999, padding: '11px 26px', fontWeight: 900, fontSize: 19 }}>{(data.promoCardLabel || '').trim() && <span>{data.promoCardLabel}</span>}<span>⏳ 00:00:00</span></span></div>
+        )}
+        {((data.announcement || '').trim() || (data.promoDeadline || '').trim()) && (
+          <div style={{ background: data.announcementBg || '#17120F', color: data.announcementColor || '#fff', textAlign: 'center', fontWeight: 800, fontSize: 15, padding: '11px 20px', direction: 'rtl', borderRadius: 10, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {(data.announcement || '').trim() && <span>{data.announcement}</span>}
+            {(data.promoDeadline || '').trim() && (() => { const rem = new Date(data.promoDeadline).getTime() - Date.now(); if (rem <= 0) return <span style={{ opacity: .6, fontSize: 13 }}>(הטיימר הסתיים)</span>; const s = Math.floor(rem / 1000), d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60); const p = (n) => String(n).padStart(2, '0'); return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,255,255,.22)', borderRadius: 999, padding: '5px 16px', fontWeight: 900, fontSize: 16 }}>⏳ {d > 0 ? `${d} ימים ${p(h)}:${p(m)}` : `${p(h)}:${p(m)}`}</span>; })()}
+          </div>
         )}
         <div style={{ marginBottom: 14 }}><span style={label}>תמונת פופאפ מבצע (URL, ריק = ללא)</span><div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>{(data.promoImage || '').trim() && <img src={data.promoImage} alt="" style={{ width: 54, height: 54, objectFit: 'cover', borderRadius: 8, border: `1px solid ${BORDER}`, flexShrink: 0 }} />}<input style={ltrInp} value={data.promoImage || ''} onChange={(e) => set('promoImage', e.target.value)} /></div></div>
         <div><span style={label}>טקסט פופאפ מבצע (אם אין תמונה)</span><textarea style={{ ...inp, minHeight: 60 }} value={data.promoPopup || ''} onChange={(e) => set('promoPopup', e.target.value)} /></div>
@@ -368,13 +381,57 @@ function GalleryEditor() {
   );
 }
 
+function QuotesPanel() {
+  const [items, setItems] = useState(null);
+  useEffect(() => { listQuotes(500).then(setItems); }, []);
+  const toMs = (t) => (t && t.seconds ? t.seconds * 1000 : 0);
+  const toggleSent = async (q) => {
+    const v = !q.sent;
+    setItems((arr) => arr.map((x) => x.id === q.id ? { ...x, sent: v } : x));
+    try { await setQuoteSent(q.id, v); } catch (e) { setItems((arr) => arr.map((x) => x.id === q.id ? { ...x, sent: !v } : x)); }
+  };
+  const card = { background: CARD, borderRadius: 16, padding: '18px 20px', boxShadow: '0 14px 40px rgba(180,100,70,.12)', marginBottom: 12, textAlign: 'right' };
+  if (items === null) return <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>טוען…</div>;
+  if (!items.length) return <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>אין בקשות להצעת מחיר עדיין.</div>;
+  return (
+    <div style={{ maxWidth: 820, margin: '0 auto' }}>
+      {items.map((q) => (
+        <div key={q.id} style={{ ...card, opacity: q.sent ? .7 : 1, border: q.sent ? '1.5px solid #BFDCB4' : `1.5px solid ${BORDER}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+            <span style={{ fontWeight: 800, color: INK, fontSize: 16 }}>{q.name || '(ללא שם)'}{q.sent && <span style={{ marginRight: 8, fontSize: 11, fontWeight: 700, color: '#3E6B33', background: '#EDF5EA', borderRadius: 999, padding: '2px 10px' }}>נשלחה הצעה ✓</span>}</span>
+            <span style={{ color: BODY, fontSize: 12 }}>{toMs(q.createdAt) ? new Date(toMs(q.createdAt)).toLocaleString('he-IL') : ''}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', color: BODY, fontSize: 14, marginBottom: q.message ? 8 : 10 }}>
+            <a href={`tel:${q.phone}`} dir="ltr" style={{ color: ACCENT, fontWeight: 700 }}>{q.phone}</a>
+            {q.email && <a href={`mailto:${q.email}`} dir="ltr" style={{ color: ACCENT }}>{q.email}</a>}
+          </div>
+          {q.message && <div style={{ color: INK, fontSize: 14, lineHeight: 1.6, background: '#FAF0E6', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>{q.message}</div>}
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: INK, fontWeight: 700 }}>
+            <input type="checkbox" checked={!!q.sent} onChange={() => toggleSent(q)} style={{ width: 18, height: 18, accentColor: ACCENT }} />
+            נשלחה הצעת מחיר
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function QuotesPanelPlaceholder() { return null; }
+
 function MonitoringPanel() {
   const [sessions, setSessions] = useState(null);
+  const [dailyDocs, setDailyDocs] = useState([]);
+  const [leadDocs, setLeadDocs] = useState([]);
   const [days, setDays] = useState('today');
   const [tab, setTab] = useState('funnel'); // funnel | leads
   const [clickCatSel, setClickCatSel] = useState('הכול');
 
-  const load = () => { setSessions(null); listSessions(1000).then(setSessions); };
+  const load = async () => {
+    setSessions(null);
+    try { await rollupOldSessions(7); } catch (e) { /* ignore */ }
+    const [ss, dd, ld] = await Promise.all([listSessions(1000), listDailyStats(120), listLeads(1000)]);
+    setDailyDocs(dd); setLeadDocs(ld); setSessions(ss);
+  };
   useEffect(() => { load(); }, []);
 
   const stepLabels = ['כניסה לאתר', 'בחירת תמונות', 'מילוי פרטים', 'תשלום', 'סיום ✓'];
@@ -382,22 +439,49 @@ function MonitoringPanel() {
   const toMs = (t) => (t && t.seconds ? t.seconds * 1000 : (t && t.toMillis ? t.toMillis() : 0));
   const rows = (sessions || []).filter((s) => { const t = toMs(s.startedAt); return !t || t >= cutoff; });
 
-  const total = rows.length;
-  const reached = (n) => rows.filter((s) => (s.maxStep || 0) >= n).length;
-  const converted = rows.filter((s) => s.converted).length;
-  const leads = rows.filter((s) => s.reachedDetails && !s.converted);
+  // older data comes pre-aggregated from dailyStats docs — fold it in
+  const dayTs = (k) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
+  const dDocs = (dailyDocs || []).filter((x) => x.date && dayTs(x.date) >= new Date(cutoff).setHours(0, 0, 0, 0) && dayTs(x.date) < new Date().setHours(0, 0, 0, 0) - 6 * 86400000 + 86400000);
+  const DA = { visits: 0, started: 0, converted: 0, reachedDetails: 0, galleryViews: 0, totalClicks: 0, mobile: 0, desktop: 0, byHour: Array(24).fill(0), byDow: Array(7).fill(0), sources: {}, clickBreakdown: {}, stepReached: [0, 0, 0, 0, 0], onSiteMs: 0, onSiteCount: 0 };
+  const dailyByDate = {};
+  dDocs.forEach((x) => {
+    DA.visits += x.visits || 0; DA.started += x.started || 0; DA.converted += x.converted || 0;
+    DA.reachedDetails += x.reachedDetails || 0; DA.galleryViews += x.galleryViews || 0; DA.totalClicks += x.totalClicks || 0;
+    DA.mobile += x.mobile || 0; DA.desktop += x.desktop || 0;
+    (x.byHour || []).forEach((v, i) => DA.byHour[i] += v || 0);
+    (x.byDow || []).forEach((v, i) => DA.byDow[i] += v || 0);
+    Object.entries(x.sources || {}).forEach(([k, v]) => DA.sources[k] = (DA.sources[k] || 0) + v);
+    Object.entries(x.clickBreakdown || {}).forEach(([k, v]) => DA.clickBreakdown[k] = (DA.clickBreakdown[k] || 0) + v);
+    (x.stepReached || []).forEach((v, i) => DA.stepReached[i] += v || 0);
+    DA.onSiteMs += x.onSiteMs || 0; DA.onSiteCount += x.onSiteCount || 0;
+    dailyByDate[x.date] = { v: (x.visits || 0), o: (x.converted || 0) };
+  });
+
+  const total = rows.length + DA.visits;
+  const reached = (n) => rows.filter((s) => (s.maxStep || 0) >= n).length + (DA.stepReached[n] || 0);
+  const converted = rows.filter((s) => s.converted).length + DA.converted;
   const convRate = total ? Math.round((converted / total) * 100) : 0;
 
   // drop-off = where each session's furthest step landed
   const leftAt = {};
   rows.forEach((s) => { const m = s.converted ? 4 : (s.maxStep || 0); leftAt[m] = (leftAt[m] || 0) + 1; });
+  for (let n = 0; n < 5; n++) { const dropped = (DA.stepReached[n] || 0) - (DA.stepReached[n + 1] || 0); if (dropped > 0) leftAt[n] = (leftAt[n] || 0) + dropped; }
+
+  // abandoned leads: standalone leads collection is the source of truth (survives pruning);
+  // fall back to recent sessions for any not yet mirrored there.
+  const leadCutoff = days === 'today' ? new Date().setHours(0, 0, 0, 0) : cutoff;
+  const leadMap = {};
+  (leadDocs || []).forEach((l) => { const t = toMs(l.createdAt); if (!l.converted && (!t || t >= leadCutoff)) leadMap[l.id] = { id: l.id, name: l.name, phone: l.phone, email: l.email, device: l.device, maxStep: 2, startedAt: l.createdAt }; });
+  rows.forEach((s) => { if (s.reachedDetails && !s.converted && !leadMap[s.id]) leadMap[s.id] = s; });
+  const leads = Object.values(leadMap);
 
   // visits by hour of day (0–23)
   const byHour = Array(24).fill(0);
   rows.forEach((s) => { const t = toMs(s.startedAt); if (t) byHour[new Date(t).getHours()]++; });
+  DA.byHour.forEach((v, i) => byHour[i] += v);
   const hourMax = Math.max(1, ...byHour);
   // device split
-  const mobileCount = rows.filter((s) => s.device === 'mobile').length;
+  const mobileCount = rows.filter((s) => s.device === 'mobile').length + DA.mobile;
   const desktopCount = total - mobileCount;
 
   // today
@@ -408,7 +492,7 @@ function MonitoringPanel() {
 
   // daily trend (within window)
   const dayKey = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  const dayMap = {};
+  const dayMap = { ...dailyByDate };
   rows.forEach((s) => { const t = toMs(s.startedAt); if (!t) return; const k = dayKey(t); if (!dayMap[k]) dayMap[k] = { v: 0, o: 0 }; dayMap[k].v++; if (s.converted) dayMap[k].o++; });
   const dailyDays = Math.min(days === 'today' ? 1 : days, 30);
   const daily = [];
@@ -419,6 +503,7 @@ function MonitoringPanel() {
   const dowNames = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
   const byDow = Array(7).fill(0);
   rows.forEach((s) => { const t = toMs(s.startedAt); if (t) byDow[new Date(t).getDay()]++; });
+  DA.byDow.forEach((v, i) => byDow[i] += v);
   const dowMax = Math.max(1, ...byDow);
 
   // traffic sources (from referrer)
@@ -426,7 +511,7 @@ function MonitoringPanel() {
     if (!ref) return 'ישיר';
     try { const h = new URL(ref).hostname.replace('www.', ''); if (/instagram/.test(h)) return 'אינסטגרם'; if (/tiktok/.test(h)) return 'טיקטוק'; if (/facebook|fb\./.test(h)) return 'פייסבוק'; if (/youtube|youtu\.be/.test(h)) return 'יוטיוב'; if (/google/.test(h)) return 'גוגל'; if (/animoment/.test(h)) return 'ישיר'; return h; } catch (e) { return 'אחר'; }
   };
-  const srcMap = {};
+  const srcMap = { ...DA.sources };
   rows.forEach((s) => { const k = sourceOf(s.referrer); srcMap[k] = (srcMap[k] || 0) + 1; });
   const sources = Object.entries(srcMap).sort((a, b) => b[1] - a[1]);
 
@@ -436,22 +521,24 @@ function MonitoringPanel() {
 
   // avg time on site (endedAt/updatedAt − startedAt across all sessions)
   const onSite = rows.map((s) => { const end = toMs(s.endedAt) || toMs(s.updatedAt); const st = toMs(s.startedAt); return (end && st && end > st) ? end - st : 0; }).filter((d) => d > 0);
-  const avgOnSiteSec = onSite.length ? Math.round(onSite.reduce((a, b) => a + b, 0) / onSite.length / 1000) : 0;
+  const onSiteSum = onSite.reduce((a, b) => a + b, 0) + DA.onSiteMs;
+  const onSiteCnt = onSite.length + DA.onSiteCount;
+  const avgOnSiteSec = onSiteCnt ? Math.round(onSiteSum / onSiteCnt / 1000) : 0;
   const fmtDur = (sec) => sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} דק׳` : `${sec} שנ׳`;
   // gallery visits
-  const galleryVisits = rows.filter((s) => s.viewedGallery).length;
+  const galleryVisits = rows.filter((s) => s.viewedGallery).length + DA.galleryViews;
   // avg scroll depth on the landing
   const scrolls = rows.map((s) => s.scrollDepth || 0).filter((v) => v > 0);
   const avgScroll = scrolls.length ? Math.round(scrolls.reduce((a, b) => a + b, 0) / scrolls.length) : 0;
   const reachedPricing = rows.filter((s) => (s.scrollDepth || 0) >= 60).length;
   // total on-site clicks + avg per session
-  const totalClicks = rows.reduce((a, s) => a + (s.clicks || 0), 0);
+  const totalClicks = rows.reduce((a, s) => a + (s.clicks || 0), 0) + DA.totalClicks;
   const avgClicks = total ? (totalClicks / total).toFixed(1) : 0;
 
   // where users clicked — aggregate the per-element breakdown across sessions.
   // click counts live either in a nested `clickBreakdown` object or as literal
   // dotted keys ("clickBreakdown.<name>"), so handle both.
-  const clickMap = {};
+  const clickMap = { ...DA.clickBreakdown };
   rows.forEach((s) => {
     if (s.clickBreakdown && typeof s.clickBreakdown === 'object') {
       Object.entries(s.clickBreakdown).forEach(([k, v]) => { clickMap[k] = (clickMap[k] || 0) + (v || 0); });
@@ -798,6 +885,7 @@ function Dashboard() {
             <button onClick={() => setTab('settings')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'settings' ? '#fff' : BODY, background: tab === 'settings' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>הגדרות האתר</button>
             <button onClick={() => setTab('gallery')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'gallery' ? '#fff' : BODY, background: tab === 'gallery' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>גלריה</button>
             <button onClick={() => setTab('monitoring')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'monitoring' ? '#fff' : BODY, background: tab === 'monitoring' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>מעקב</button>
+            <button onClick={() => setTab('quotes')} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: tab === 'quotes' ? '#fff' : BODY, background: tab === 'quotes' ? ACCENT : 'transparent', padding: '7px 18px', borderRadius: 999 }}>הצעות מחיר</button>
           </div>
           <div style={{ flex: 1 }} />
           {tab === 'orders' && <select value={filter} onChange={(e) => setFilter(e.target.value)} style={{ fontFamily: "'Heebo', sans-serif", fontSize: 14, padding: '8px 12px', borderRadius: 10, border: `1px solid ${BORDER}` }}>
@@ -808,7 +896,7 @@ function Dashboard() {
           <button onClick={() => adminLogout()} style={{ border: 'none', background: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: BODY }}>יציאה</button>
         </div>
 
-        {tab === 'settings' ? <SettingsEditor /> : tab === 'gallery' ? <GalleryEditor /> : tab === 'monitoring' ? <MonitoringPanel /> : (
+        {tab === 'settings' ? <SettingsEditor /> : tab === 'gallery' ? <GalleryEditor /> : tab === 'monitoring' ? <MonitoringPanel /> : tab === 'quotes' ? <QuotesPanel /> : (
           orders === null ? (
             <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>טוען…</div>
           ) : shown.length === 0 ? (

@@ -1,10 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { config, colors as C } from '../config.js';
+import { saveQuote } from '../firebase.js';
 import { pillBtn, smallGhostBtn } from '../styles.js';
 
 // Screen 0 — landing page: hero, dictionary word, filmstrip, how-it-works, pricing, closing CTA.
 export default function LandingScreen({ onStart, onOpenHow }) {
   const [lightbox, setLightbox] = useState(null); // { title, video }
+  const [priceTick, setPriceTick] = useState(Date.now());
+  const [quote, setQuote] = useState({ name: '', phone: '', email: '', message: '' });
+  const [quoteSent, setQuoteSent] = useState(false);
+  const [quoteBusy, setQuoteBusy] = useState(false);
+  const [quoteErr, setQuoteErr] = useState('');
+  useEffect(() => { if (!config.promoTimerOnCards || !(config.promoDeadline || '').trim()) return; const t = setInterval(() => setPriceTick(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const priceTimer = (() => {
+    if (!config.promoTimerOnCards || !(config.promoDeadline || '').trim()) return '';
+    const rem = new Date(config.promoDeadline).getTime() - priceTick;
+    if (rem <= 0) return '';
+    const s = Math.floor(rem / 1000), d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+    const p = (n) => String(n).padStart(2, '0');
+    return d > 0 ? `${d} ימים ${p(h)}:${p(m)}:${p(ss)}` : `${p(h)}:${p(m)}:${p(ss)}`;
+  })();
   const [zoomImg, setZoomImg] = useState(null); // testimonial / hero photo zoom
   const [zoomVideo, setZoomVideo] = useState(false);
   const [openPkg, setOpenPkg] = useState(null);
@@ -156,6 +171,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
       <div id="pricing" className="section-pad" style={{ maxWidth: 1080, margin: '0 auto', padding: '90px 24px 40px', scrollMarginTop: 90 }}>
         <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.7rem, 4vw, 2.4rem)', textAlign: 'center', margin: '0 0 12px' }}>מחירים וחבילות</h2>
         <p style={{ textAlign: 'center', color: C.muted, fontSize: '1.05rem', margin: '0 0 20px' }}>בוחרים חבילה — משלמים רק בסוף, אחרי שבחרתם תמונות.</p>
+        {priceTimer && <div style={{ textAlign: 'center', margin: '0 0 20px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: config.promoCardBg || C.accent, color: config.promoCardColor || '#fff', borderRadius: 999, padding: '11px 26px', fontWeight: 900, fontSize: 19, boxShadow: '0 10px 26px rgba(196,80,46,.35)' }}>{(config.promoCardLabel || '').trim() && <span>{config.promoCardLabel}</span>}<span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontVariantNumeric: 'tabular-nums' }}><span style={{ display: 'inline-block', animation: 'clock-tick 1s steps(2) infinite' }}>⏳</span> {priceTimer}</span></span></div>}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, margin: '0 0 44px', color: C.body, fontSize: 13.5, fontWeight: 700 }}>
           {['🔒 תשלום מאובטח', '⏱️ מוכן תוך 48 שעות'].map((t) => (
             <span key={t} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 999, padding: '7px 16px', boxShadow: '0 4px 14px rgba(180,100,70,.08)' }}>{t}</span>

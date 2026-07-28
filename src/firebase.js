@@ -252,6 +252,32 @@ export async function findProducts(input) {
   }
 }
 
+// Save a custom-offer / price-quote request (people wanting multiple or special videos).
+export async function saveQuote(q) {
+  if (!ready()) throw new Error('Firebase not configured');
+  const id = 'q-' + Date.now() + Math.random().toString(36).slice(2, 6);
+  await setDoc(doc(collection(db, 'quotes'), id), {
+    name: (q.name || '').slice(0, 80),
+    phone: (q.phone || '').slice(0, 40),
+    email: (q.email || '').slice(0, 120),
+    message: (q.message || '').slice(0, 1000),
+    status: 'new',
+    createdAt: serverTimestamp()
+  });
+  return id;
+}
+export async function listQuotes(max = 500) {
+  if (!ready()) return [];
+  try {
+    const snap = await getDocs(query(collection(db, 'quotes'), orderBy('createdAt', 'desc'), limit(max)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (e) { console.warn('listQuotes failed', e); return []; }
+}
+export async function setQuoteSent(id, sent) {
+  if (!ready()) throw new Error('Firebase not configured');
+  await setDoc(doc(collection(db, 'quotes'), id), { sent: !!sent, status: sent ? 'sent' : 'new' }, { merge: true });
+}
+
 // Write one order document. Never throws — a DB hiccup must not break the flow.
 export async function saveOrder(order) {
   if (!ready()) return;
@@ -329,6 +355,16 @@ export async function trackLead(info) {
       email: (info.email || '').slice(0, 120),
       updatedAt: serverTimestamp()
     }, { merge: true });
+    // Also persist as a standalone lead so it survives session pruning.
+    await setDoc(doc(collection(db, 'leads'), sessionId()), {
+      name: (info.name || '').slice(0, 80),
+      phone: (info.phone || '').slice(0, 40),
+      email: (info.email || '').slice(0, 120),
+      device: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+      referrer: (document.referrer || '').slice(0, 300),
+      converted: false,
+      createdAt: serverTimestamp()
+    }, { merge: true });
   } catch (e) { /* silent */ }
 }
 
@@ -336,6 +372,7 @@ export async function markConverted(orderId) {
   if (!ready()) return;
   try {
     await setDoc(sessionRef(), { converted: true, orderId: orderId || '', convertedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+    setDoc(doc(collection(db, 'leads'), sessionId()), { converted: true, orderId: orderId || '' }, { merge: true }).catch(() => {});
   } catch (e) { /* silent */ }
 }
 
@@ -361,18 +398,28 @@ export async function trackScroll(pct) {
   try { await setDoc(sessionRef(), { scrollDepth: v, updatedAt: serverTimestamp() }, { merge: true }); } catch (e) { /* silent */ }
 }
 
-// Count an on-site click. Increments a total and (optionally) a per-name counter,
-// and bumps endedAt so time-on-site reflects the last real interaction.
-export async function trackClick(name) {
-  if (!ready()) return;
+// Count on-site clicks. Batched in memory and flushed periodically (and on unload),
+// so a burst of clicks costs one write instead of two writes per click.
+let _clickBuf = {};
+let _clickTotal = 0;
+let _clickFlushing = false;
+export function trackClick(name) {
   const key = (name || '').replace(/[.$\[\]/~*#\s]+/g, '_').slice(0, 40);
   if (!key) return; // only count named (meaningful) clicks
-  // group all close buttons (×, x, aria "סגירה") under one label
   const label = (name === '×' || name === 'x' || name === 'X' || name === 'סגירה') ? 'סגירה' : key;
+  _clickBuf[label] = (_clickBuf[label] || 0) + 1;
+  _clickTotal += 1;
+}
+export async function flushClicks() {
+  if (!ready() || _clickTotal === 0 || _clickFlushing) return;
+  _clickFlushing = true;
+  const buf = _clickBuf; const total = _clickTotal;
+  _clickBuf = {}; _clickTotal = 0;
   try {
-    await setDoc(sessionRef(), { clicks: increment(1), endedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
-    await setDoc(sessionRef(), { clickBreakdown: { [label]: increment(1) } }, { merge: true });
-  } catch (e) { /* silent */ }
+    const bd = {};
+    Object.keys(buf).forEach((k) => { bd[k] = increment(buf[k]); });
+    await setDoc(sessionRef(), { clicks: increment(total), clickBreakdown: bd, endedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+  } catch (e) { /* silent */ } finally { _clickFlushing = false; }
 }
 
 // Admin: list recent sessions for the monitoring page.
@@ -383,3 +430,85 @@ export async function listSessions(max = 500) {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   } catch (e) { console.warn('listSessions failed', e); return []; }
 }
+
+// Admin: standalone leads (preserved beyond session pruning).
+export async function listLeads(max = 1000) {
+  if (!ready()) return [];
+  try {
+    const snap = await getDocs(query(collection(db, 'leads'), orderBy('createdAt', 'desc'), limit(max)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (e) { console.warn('listLeads failed', e); return []; }
+}
+
+// Admin: read the daily-aggregate rollup docs (one per date, id = YYYY-MM-DD).
+export async function listDailyStats(max = 120) {
+  if (!ready()) return [];
+  try {
+    const snap = await getDocs(query(collection(db, 'dailyStats'), orderBy('date', 'desc'), limit(max)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (e) { console.warn('listDailyStats failed', e); return []; }
+}
+
+// Admin: roll up sessions older than `keepDays` into dailyStats docs, then delete them.
+// Runs on admin load; safe to call repeatedly. Returns number of sessions pruned.
+export async function rollupOldSessions(keepDays = 7) {
+  if (!ready()) return 0;
+  const cutoff = Date.now() - keepDays * 86400000;
+  const toMs = (t) => (t && t.seconds ? t.seconds * 1000 : (t && t.toMillis ? t.toMillis() : 0));
+  const dayKey = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  try {
+    const snap = await getDocs(query(collection(db, 'sessions'), orderBy('startedAt', 'asc'), limit(500)));
+    const old = snap.docs.filter((d) => { const t = toMs(d.data().startedAt); return t && t < cutoff; });
+    if (!old.length) return 0;
+    // group by date
+    const byDate = {};
+    old.forEach((docSnap) => {
+      const s = docSnap.data(); const t = toMs(s.startedAt); const k = dayKey(t);
+      if (!byDate[k]) byDate[k] = { date: k, visits: 0, started: 0, converted: 0, reachedDetails: 0, galleryViews: 0, totalClicks: 0, mobile: 0, desktop: 0, byHour: Array(24).fill(0), byDow: Array(7).fill(0), sources: {}, clickBreakdown: {}, stepReached: [0, 0, 0, 0, 0], onSiteMs: 0, onSiteCount: 0 };
+      const a = byDate[k]; const d = new Date(t);
+      a.visits++;
+      if ((s.maxStep || 0) >= 1) a.started++;
+      if (s.converted) a.converted++;
+      if (s.reachedDetails) a.reachedDetails++;
+      if (s.viewedGallery) a.galleryViews++;
+      a.totalClicks += (s.clicks || 0);
+      if (s.device === 'mobile') a.mobile++; else a.desktop++;
+      a.byHour[d.getHours()]++; a.byDow[d.getDay()]++;
+      for (let n = 0; n <= (s.converted ? 4 : (s.maxStep || 0)); n++) a.stepReached[n]++;
+      const src = (() => { const r = s.referrer; if (!r) return 'ישיר'; try { const h = new URL(r).hostname.replace('www.', ''); if (/instagram/.test(h)) return 'אינסטגרם'; if (/tiktok/.test(h)) return 'טיקטוק'; if (/facebook|fb\./.test(h)) return 'פייסבוק'; if (/youtube|youtu\.be/.test(h)) return 'יוטיוב'; if (/google/.test(h)) return 'גוגל'; if (/animoment/.test(h)) return 'ישיר'; return h; } catch (e) { return 'אחר'; } })();
+      a.sources[src] = (a.sources[src] || 0) + 1;
+      const cb = s.clickBreakdown || {}; Object.keys(cb).forEach((kk) => { a.clickBreakdown[kk] = (a.clickBreakdown[kk] || 0) + (cb[kk] || 0); });
+      const end = toMs(s.endedAt) || toMs(s.updatedAt); if (end && end > t) { a.onSiteMs += (end - t); a.onSiteCount++; }
+    });
+    // merge each date into its dailyStats doc (read-modify-write)
+    for (const k of Object.keys(byDate)) {
+      const ref = doc(collection(db, 'dailyStats'), k);
+      const cur = (await getDoc(ref)).data() || {};
+      const a = byDate[k];
+      const addArr = (x = [], y = []) => x.map((v, i) => (v || 0) + (y[i] || 0));
+      const addMap = (x = {}, y = {}) => { const o = { ...x }; Object.keys(y).forEach((kk) => { o[kk] = (o[kk] || 0) + y[kk]; }); return o; };
+      await setDoc(ref, {
+        date: k,
+        visits: (cur.visits || 0) + a.visits,
+        started: (cur.started || 0) + a.started,
+        converted: (cur.converted || 0) + a.converted,
+        reachedDetails: (cur.reachedDetails || 0) + a.reachedDetails,
+        galleryViews: (cur.galleryViews || 0) + a.galleryViews,
+        totalClicks: (cur.totalClicks || 0) + a.totalClicks,
+        mobile: (cur.mobile || 0) + a.mobile,
+        desktop: (cur.desktop || 0) + a.desktop,
+        byHour: addArr(cur.byHour || Array(24).fill(0), a.byHour),
+        byDow: addArr(cur.byDow || Array(7).fill(0), a.byDow),
+        sources: addMap(cur.sources, a.sources),
+        clickBreakdown: addMap(cur.clickBreakdown, a.clickBreakdown),
+        stepReached: addArr(cur.stepReached || [0, 0, 0, 0, 0], a.stepReached),
+        onSiteMs: (cur.onSiteMs || 0) + a.onSiteMs,
+        onSiteCount: (cur.onSiteCount || 0) + a.onSiteCount
+      }, { merge: true });
+    }
+    // delete the rolled-up sessions
+    await Promise.all(old.map((d) => deleteDoc(doc(collection(db, 'sessions'), d.id))));
+    return old.length;
+  } catch (e) { console.warn('rollupOldSessions failed', e); return 0; }
+}
+
