@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { colors as C } from '../config.js';
 import { pillBtn, ghostBtn } from '../styles.js';
-import { findProducts } from '../firebase.js';
+import { findProducts, markVideoOpened } from '../firebase.js';
 
 // Force a video URL to download rather than preview. For Cloudinary, insert fl_attachment.
 function downloadUrl(url) {
@@ -25,6 +25,8 @@ export default function LookupScreen({ onHome }) {
     if (list.length) { setProducts(list); setState('found'); }
     else { setProducts([]); setState('notfound'); }
   };
+  const ready = products.filter((p) => (p.videoUrl || '').trim());
+  const pending = products.filter((p) => !(p.videoUrl || '').trim());
 
   return (
     <div style={{ maxWidth: 520, margin: '0 auto', padding: '48px 20px 70px', animation: 'rise-in .5s ease both', width: '100%', boxSizing: 'border-box' }}>
@@ -51,15 +53,23 @@ export default function LookupScreen({ onHome }) {
 
         {state === 'found' && products.length > 0 && (
           <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {products.length > 1 && <div style={{ fontWeight: 700, color: C.body, fontSize: '.9rem' }}>נמצאו {products.length} סרטונים:</div>}
-            {products.map((p, i) => (
+            {ready.length > 1 && <div style={{ fontWeight: 700, color: C.body, fontSize: '.9rem' }}>נמצאו {ready.length} סרטונים:</div>}
+            {ready.map((p, i) => (
               <div key={i} style={{ background: '#EDF5EA', border: '1px solid #BFDCB4', borderRadius: 16, padding: '20px' }}>
                 <div style={{ fontWeight: 800, color: '#3E6B33', fontSize: '1.05rem', marginBottom: 4 }}>הסרטון שלכם מוכן ✓</div>
                 {p.orderId && <div style={{ color: C.muted, fontSize: '.85rem', marginBottom: 14 }}>מספר הזמנה: {p.orderId}</div>}
-                <a href={downloadUrl(p.videoUrl)} download
+                <a href={downloadUrl(p.videoUrl)} download onClick={() => markVideoOpened(p.orderId)}
                   style={{ display: 'inline-block', textDecoration: 'none', border: 'none', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 16, color: '#fff', background: `linear-gradient(135deg, ${C.accent}, ${C.accentSoft})`, padding: '13px 30px', borderRadius: 999, boxShadow: '0 8px 20px rgba(196,80,46,.3)' }}>
                   הורדת הסרטון ↓
                 </a>
+              </div>
+            ))}
+            {pending.map((p, i) => (
+              <div key={`p${i}`} style={{ background: '#FBE9DA', border: '1px solid #F0C9A8', borderRadius: 16, padding: '22px' }}>
+                <div style={{ fontSize: 30, marginBottom: 6 }}>✨</div>
+                <div style={{ fontWeight: 800, color: C.accentDark, fontSize: '1.1rem', marginBottom: 4 }}>הסרטון שלכם בדרך! 🎬</div>
+                {p.orderId && <div style={{ color: C.muted, fontSize: '.85rem', marginBottom: 8 }}>מספר הזמנה: {p.orderId}</div>}
+                <div style={{ color: C.body, fontSize: '.95rem', lineHeight: 1.7 }}>קיבלנו את ההזמנה ואנחנו כבר עובדים על הקסם 💛 הסרטון יהיה מוכן עד 48 שעות, ותקבלו הודעה כשהוא מוכן לצפייה.</div>
               </div>
             ))}
           </div>

@@ -241,10 +241,13 @@ export async function findProducts(input) {
   try {
     // 1. treat input as the order id (products doc id == orderId)
     const byId = await getDoc(doc(collection(db, 'products'), val));
-    if (byId.exists() && byId.data().videoUrl) return [byId.data()];
+    if (byId.exists()) return [byId.data()];
     // 2. otherwise query by the orderId field
     const snap = await getDocs(query(collection(db, 'products'), where('orderId', '==', val)));
-    if (!snap.empty) return snap.docs.map((d) => d.data()).filter((p) => p.videoUrl);
+    if (!snap.empty) return snap.docs.map((d) => d.data());
+    // 3. no product yet — check the public order-status mirror ("on the way")
+    const st = await getDoc(doc(collection(db, 'orderStatus'), val));
+    if (st.exists()) return [{ orderId: val, videoUrl: '' }];
     return [];
   } catch (e) {
     console.warn('findProducts failed', e);
@@ -323,6 +326,8 @@ export async function saveOrder(order) {
       updatedAt: serverTimestamp(),
       ...(order.status === 'pending' ? { createdAt: serverTimestamp() } : { paidAt: serverTimestamp() })
     }, { merge: true });
+    // public, PII-free status mirror so the lookup can show "on the way" before a video exists
+    await setDoc(doc(collection(db, 'orderStatus'), order.orderId), { orderId: order.orderId, ready: false, updatedAt: serverTimestamp() }, { merge: true });
   } catch (e) {
     console.warn('saveOrder failed', e);
   }
@@ -402,6 +407,12 @@ export async function markConverted(orderId) {
     await setDoc(sessionRef(), { converted: true, orderId: orderId || '', convertedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
     setDoc(doc(collection(db, 'leads'), sessionId()), { converted: true, orderId: orderId || '' }, { merge: true }).catch(() => {});
   } catch (e) { /* silent */ }
+}
+
+// Mark that a customer opened/downloaded their finished video (shown in admin Orders).
+export async function markVideoOpened(orderId) {
+  if (!ready() || !orderId) return;
+  try { await setDoc(doc(collection(db, 'orders'), orderId), { videoOpened: true, videoOpenedAt: serverTimestamp() }, { merge: true }); } catch (e) { /* silent */ }
 }
 
 // Mark that this session viewed the gallery.

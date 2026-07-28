@@ -66,6 +66,9 @@ function OrderRow({ order, product, onSaved }) {
       <td style={{ ...cell, whiteSpace: 'nowrap' }}>{order.packageId || '—'}</td>
       <td style={cell}>{order.musicMood || '—'}</td>
       <td style={{ ...cell, maxWidth: 180 }}>{order.blessing || ''}</td>
+      <td style={{ ...cell, whiteSpace: 'nowrap', textAlign: 'center' }}>{order.videoOpened
+        ? <span style={{ fontSize: 11, fontWeight: 700, color: '#3E6B33', background: '#EDF5EA', borderRadius: 999, padding: '3px 10px' }}>נצפה ✓</span>
+        : <span style={{ fontSize: 11, fontWeight: 700, color: '#9A8979' }}>—</span>}</td>
       <td style={cell}>
         <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ fontFamily: "'Heebo', sans-serif", fontSize: 13, padding: '5px 8px', borderRadius: 8, border: `1px solid ${BORDER}` }}>
           {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -943,6 +946,7 @@ function Dashboard() {
                   <tr>
                     <th style={th}>מספר הזמנה</th><th style={th}>שם</th><th style={th}>קשר</th>
                     <th style={th}>חבילה</th><th style={th}>מוזיקה</th><th style={th}>ברכה</th>
+                    <th style={th}>נצפה</th>
                     <th style={th}>סטטוס</th><th style={th}>וידאו סופי</th>
                   </tr>
                 </thead>
