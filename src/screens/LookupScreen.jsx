@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { colors as C } from '../config.js';
 import { pillBtn, ghostBtn } from '../styles.js';
 import { findProducts, markVideoOpened } from '../firebase.js';
@@ -13,18 +13,21 @@ function downloadUrl(url) {
 }
 
 // "הסרטון שלי" — retrieve finished video(s) by order number.
-export default function LookupScreen({ onHome }) {
-  const [value, setValue] = useState('');
+export default function LookupScreen({ onHome, initialQuery }) {
+  const [value, setValue] = useState(initialQuery || '');
   const [state, setState] = useState('idle'); // idle | searching | found | notfound
   const [products, setProducts] = useState([]);
 
-  const search = async () => {
-    if (!value.trim()) return;
+  const search = async (q) => {
+    const term = (typeof q === 'string' ? q : value).trim();
+    if (!term) return;
     setState('searching');
-    const list = await findProducts(value);
+    const list = await findProducts(term);
     if (list.length) { setProducts(list); setState('found'); }
     else { setProducts([]); setState('notfound'); }
   };
+
+  useEffect(() => { if ((initialQuery || '').trim()) search(initialQuery); }, []); // eslint-disable-line
   const ready = products.filter((p) => (p.videoUrl || '').trim());
   const pending = products.filter((p) => !(p.videoUrl || '').trim());
 
@@ -46,7 +49,7 @@ export default function LookupScreen({ onHome }) {
           style={{ width: '100%', boxSizing: 'border-box', direction: 'rtl', textAlign: 'center', fontFamily: "'Heebo', sans-serif", fontSize: 16, padding: '13px 16px', border: `1.5px solid ${C.borderStrong}`, borderRadius: 14, background: '#FFFDFA', color: C.ink, outline: 'none', marginBottom: 14 }}
         />
 
-        <button onClick={search} disabled={!value.trim() || state === 'searching'}
+        <button onClick={() => search()} disabled={!value.trim() || state === 'searching'}
           style={{ ...pillBtn, width: '100%', padding: '14px 20px', opacity: (!value.trim() || state === 'searching') ? .6 : 1, cursor: (!value.trim() || state === 'searching') ? 'not-allowed' : 'pointer' }}>
           {state === 'searching' ? 'מחפשים…' : 'איתור הסרטון'}
         </button>

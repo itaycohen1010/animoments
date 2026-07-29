@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { config } from '../config.js';
-import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, reorderGallery, listSessions, listDailyStats, listLeads, rollupOldSessions, listQuotes, setQuoteSent, uploadToStorage } from '../firebase.js';
+import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, updateOrderDetails, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, reorderGallery, listSessions, listDailyStats, listLeads, rollupOldSessions, listQuotes, setQuoteSent, uploadToStorage } from '../firebase.js';
 
 const C = config.colors || {};
 const ACCENT = '#C4502E', INK = '#3B2A20', BODY = '#6E5240', CARD = '#fff', BG = '#FAF0E6', BORDER = '#F0D9C4';
@@ -46,6 +46,22 @@ function OrderRow({ order, product, onSaved }) {
   const [status, setStatus] = useState(order.status || 'new');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [mailBusy, setMailBusy] = useState(false);
+  const [mailSent, setMailSent] = useState(false);
+  const [mailPreview, setMailPreview] = useState(false);
+
+  const sendVideoReady = async () => {
+    if (!order.email) { alert('לא נמצא מייל להזמנה זו'); return; }
+    setMailBusy(true); setMailSent(false);
+    try {
+      await fetch((config.emailEndpoint || '').trim(), {
+        method: 'POST', mode: 'no-cors',
+        body: JSON.stringify({ token: 'am_9f3k2xQ7pL5vR8wZ1tB6nH0', type: 'video_ready', order_id: order.orderId, to_email: order.email, to_name: order.name || '' })
+      });
+      setMailSent(true); setMailPreview(false);
+    } catch (e) { alert('שליחה נכשלה: ' + e.message); }
+    finally { setMailBusy(false); }
+  };
 
   const save = async () => {
     setBusy(true); setSaved(false);
@@ -58,11 +74,21 @@ function OrderRow({ order, product, onSaved }) {
   };
 
   const cell = { padding: '10px 12px', fontSize: 13, color: INK, verticalAlign: 'top', borderBottom: `1px solid ${BORDER}` };
+
+  const [editing, setEditing] = useState(false);
+  const [ed, setEd] = useState({ name: order.name || '', phone: order.phone || '', email: order.email || '' });
+  const saveEdit = async () => {
+    try { await updateOrderDetails(order.orderId, ed); order.name = ed.name; order.phone = ed.phone; order.email = ed.email; setEditing(false); onSaved && onSaved(); }
+    catch (e) { alert('עדכון נכשל: ' + e.message); }
+  };
+  const edInp = { width: '100%', boxSizing: 'border-box', fontFamily: "'Heebo', sans-serif", fontSize: 12, padding: '5px 7px', border: `1px solid ${BORDER}`, borderRadius: 6, marginBottom: 4 };
   return (
     <tr>
       <td style={{ ...cell, fontWeight: 700, whiteSpace: 'nowrap' }}>{order.orderId}</td>
-      <td style={cell}>{order.name || '—'}</td>
-      <td style={{ ...cell, direction: 'ltr' }}>{order.phone || '—'}<br />{order.email || ''}</td>
+      <td style={cell}>{editing ? <input style={edInp} value={ed.name} onChange={(e) => setEd({ ...ed, name: e.target.value })} /> : (order.name || '—')}</td>
+      <td style={{ ...cell, direction: 'ltr' }}>{editing
+        ? <><input style={{ ...edInp, direction: 'ltr' }} value={ed.phone} onChange={(e) => setEd({ ...ed, phone: e.target.value })} placeholder="טלפון" /><input style={{ ...edInp, direction: 'ltr' }} value={ed.email} onChange={(e) => setEd({ ...ed, email: e.target.value })} placeholder="מייל" /><div style={{ display: 'flex', gap: 6 }}><button onClick={saveEdit} style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 11, color: '#fff', background: ACCENT, padding: '5px 10px', borderRadius: 6 }}>שמירה</button><button onClick={() => setEditing(false)} style={{ border: `1px solid ${BORDER}`, background: '#fff', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontSize: 11, color: BODY, padding: '5px 10px', borderRadius: 6 }}>ביטול</button></div></>
+        : <>{order.phone || '—'}<br />{order.email || ''}<br /><button onClick={() => { setEd({ name: order.name || '', phone: order.phone || '', email: order.email || '' }); setEditing(true); }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: ACCENT, fontSize: 11, fontWeight: 700, padding: '2px 0', textDecoration: 'underline', direction: 'rtl' }}>✎ עריכת פרטים</button></>}</td>
       <td style={{ ...cell, whiteSpace: 'nowrap' }}>{order.packageId || '—'}</td>
       <td style={cell}>{order.musicMood || '—'}</td>
       <td style={{ ...cell, maxWidth: 180 }}>{order.blessing || ''}</td>
@@ -82,7 +108,53 @@ function OrderRow({ order, product, onSaved }) {
             style={{ border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 12, color: '#fff', background: saved ? '#3E8E41' : ACCENT, padding: '7px 12px', borderRadius: 8, whiteSpace: 'nowrap' }}>
             {busy ? '…' : saved ? '✓' : 'שמירה'}
           </button>
+          <button onClick={() => order.email ? setMailPreview(true) : alert('לא נמצא מייל להזמנה זו')} disabled={mailBusy || !order.email} title="שליחת מייל 'הסרטון מוכן' ללקוח"
+            style={{ border: `1px solid ${ACCENT}`, cursor: (mailBusy || !order.email) ? 'not-allowed' : 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 12, color: mailSent ? '#fff' : ACCENT, background: mailSent ? '#3E8E41' : '#fff', padding: '7px 12px', borderRadius: 8, whiteSpace: 'nowrap', opacity: (mailBusy || !order.email) ? .5 : 1 }}>
+            {mailBusy ? '…' : mailSent ? '✓ נשלח' : '✉ מייל מוכן'}
+          </button>
         </div>
+        {mailPreview && (
+          <div onClick={() => setMailPreview(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(59,42,32,.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, maxWidth: 460, width: '100%', maxHeight: '88vh', overflowY: 'auto', padding: '24px 22px', textAlign: 'right', direction: 'rtl', boxShadow: '0 24px 60px rgba(59,42,32,.3)' }}>
+              <h3 style={{ margin: '0 0 4px', color: INK, fontSize: '1.15rem', fontWeight: 800 }}>שליחת מייל "הסרטון מוכן"</h3>
+              <p style={{ margin: '0 0 16px', color: BODY, fontSize: 13 }}>בדקו את הפרטים לפני השליחה:</p>
+              <div style={{ background: '#FAF0E6', borderRadius: 12, padding: '12px 16px', fontSize: 14, color: INK, marginBottom: 16, lineHeight: 1.9 }}>
+                <div><b>שם:</b> {order.name || '—'}</div>
+                <div style={{ direction: 'ltr', textAlign: 'right' }}><b>מייל:</b> {order.email}</div>
+                <div><b>מספר הזמנה:</b> {order.orderId}</div>
+              </div>
+              <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden', marginBottom: 18, background: '#FAF0E6' }}>
+                <div style={{ background: '#2E1F17', padding: '22px 16px', textAlign: 'center' }}>
+                  <div style={{ color: '#E8A13C', fontWeight: 900, fontSize: 22 }}>זִכְרוֹנִימַצְיָה</div>
+                  <div style={{ color: 'rgba(250,240,230,.7)', fontSize: 12, marginTop: 4 }}>הזכרונות שלכם — לסרטון מרגש</div>
+                </div>
+                <div style={{ padding: '22px 18px', textAlign: 'right' }}>
+                  <div style={{ fontWeight: 800, fontSize: 19, color: INK, marginBottom: 6 }}>הסרטון שלכם מוכן, {order.name || ''}! 🎬</div>
+                  <div style={{ color: BODY, fontSize: 13, lineHeight: 1.7, marginBottom: 16 }}>עבדנו על הזכרונות שלכם באהבה — והסרטון מוכן! לצפייה והורדה יש להיכנס לאתר שלנו, ללחוץ על ”הסרטון שלי“ ולהזין את מספר ההזמנה שלכם.</div>
+                  <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                    <span style={{ display: 'inline-block', background: ACCENT, color: '#fff', fontWeight: 800, fontSize: 14, padding: '13px 32px', borderRadius: 999 }}>לצפייה והורדה — ”הסרטון שלי“ ←</span>
+                  </div>
+                  <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', fontSize: 13, color: INK }}>
+                    <span style={{ color: '#9A8979' }}>מספר ההזמנה (לאיתור הסרטון)</span><b style={{ color: ACCENT }}>{order.orderId}</b>
+                  </div>
+                  <div style={{ background: '#FBE4D7', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+                    <div style={{ fontWeight: 800, color: '#A83E20', fontSize: 13, marginBottom: 6 }}>שווה לדעת</div>
+                    <div style={{ color: BODY, fontSize: 12.5, lineHeight: 1.9 }}>
+                      🌐 הסרטון זמין לצפייה והורדה באתר שלנו תחת ”הסרטון שלי“<br />
+                      📅 הסרטון נשמר אצלנו למשך 28 ימים — מומלץ להוריד עותק למכשירכם<br />
+                      📞 יש שאלה? השיבו למייל הזה או שלחו וואטסאפ ל-055-274-5188
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center', color: '#9A8979', fontSize: 12 }}>נשלח באהבה מזכרונימציה ❤️</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={sendVideoReady} disabled={mailBusy} style={{ flex: 1, border: 'none', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 14, color: '#fff', background: ACCENT, padding: '11px', borderRadius: 10, opacity: mailBusy ? .6 : 1 }}>{mailBusy ? 'שולח…' : 'אישור ושליחה'}</button>
+                <button onClick={() => setMailPreview(false)} style={{ border: `1px solid ${BORDER}`, background: '#fff', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: BODY, padding: '11px 18px', borderRadius: 10 }}>ביטול</button>
+              </div>
+            </div>
+          </div>
+        )}
       </td>
     </tr>
   );

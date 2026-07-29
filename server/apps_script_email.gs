@@ -51,6 +51,52 @@ function doPost(e) {
     return ContentService.createTextOutput('bad email');
   }
 
+  // ---------- "הסרטון מוכן" מייל (נשלח ידנית מעמוד הניהול) ----------
+  if (raw.type === 'video_ready') {
+    var vhtml =
+    '<div dir="rtl" style="background:#EFE4D8;padding:24px 10px;font-family:Heebo,Arial,sans-serif">' +
+     '<div style="max-width:620px;margin:0 auto;background:#FAF0E6;border-radius:8px;overflow:hidden">' +
+      '<div style="background:#2E1F17;padding:26px 20px;text-align:center">' +
+       '<div style="color:#E8A13C;font-weight:900;font-size:24px">זִכְרוֹנִימַצְיָה</div>' +
+       '<div style="color:rgba(250,240,230,.7);font-size:13px;margin-top:4px">הזכרונות שלכם — לסרטון מרגש</div>' +
+      '</div>' +
+      '<div style="padding:32px 28px;text-align:right">' +
+       '<h1 style="margin:0 0 6px;color:#3B2A20;font-size:24px">הסרטון שלכם מוכן, ' + d.to_name + '! 🎬</h1>' +
+       '<p style="margin:0 0 22px;color:#6E5240;font-size:15px;line-height:1.7">עבדנו על הזכרונות שלכם באהבה — והסרטון מוכן! לצפייה והורדה יש להיכנס לאתר שלנו, ללחוץ על ”הסרטון שלי“ ולהזין את מספר ההזמנה שלכם.</p>' +
+       '<div style="text-align:center;margin-bottom:22px">' +
+       '<a href="' + SITE_URL + '/?lookup=1&order=' + encodeURIComponent(d.order_id) + '" style="display:inline-block;background:#C4502E;color:#fff;text-decoration:none;font-weight:800;font-size:16px;padding:15px 40px;border-radius:999px">לצפייה והורדה — ”הסרטון שלי“ ←</a>' +
+       '</div>' +
+       '<div style="background:#fff;border:1px solid #F0D9C4;border-radius:12px;padding:14px 20px;margin-bottom:22px;display:flex;justify-content:space-between;font-size:14px;color:#3B2A20">' +
+        '<span style="color:#9A8979">מספר ההזמנה (לאיתור הסרטון)</span><b style="color:#C4502E">' + d.order_id + '</b>' +
+       '</div>' +
+       '<div style="background:#FBE4D7;border-radius:12px;padding:16px 20px;margin-bottom:22px">' +
+        '<div style="font-weight:800;color:#A83E20;font-size:15px;margin-bottom:8px">שווה לדעת</div>' +
+        '<div style="color:#6E5240;font-size:14px;line-height:1.9">' +
+         '🌐 הסרטון זמין לצפייה והורדה באתר שלנו תחת ”הסרטון שלי“<br>' +
+         '📅 הסרטון נשמר אצלנו למשך 28 ימים — מומלץ להוריד עותק למכשירכם<br>' +
+         '📞 יש שאלה? השיבו למייל הזה או שלחו לנו וואטסאפ ל-055-274-5188' +
+        '</div>' +
+       '</div>' +
+       '<p style="margin:0;color:#9A8979;font-size:13px;text-align:center">נשלח באהבה מזכרונימציה ❤️</p>' +
+      '</div>' +
+     '</div>' +
+    '</div>';
+
+    MailApp.sendEmail({
+      to: d.to_email,
+      subject: 'הסרטון שלכם מוכן! 🎬',
+      name: 'זכרונימציה',
+      replyTo: Session.getEffectiveUser().getEmail(),
+      htmlBody: vhtml,
+      body: 'הסרטון שלכם מוכן, ' + d.to_name + '!\n\n' +
+            'לצפייה והורדה היכנסו לאתר ' + SITE_URL + ', לחצו על "הסרטון שלי" והזינו את מספר ההזמנה: ' + d.order_id + '\n\n' +
+            'הסרטון נשמר אצלנו למשך 28 ימים — מומלץ להוריד עותק.\n' +
+            'יש שאלה? השיבו למייל הזה או שלחו וואטסאפ ל-055-274-5188.\n\n' +
+            'נשלח באהבה מזכרונימציה'
+    });
+    return ContentService.createTextOutput('ok');
+  }
+
   // ---------- מייל מעוצב ללקוח ----------
   const html =
   '<div dir="rtl" style="background:#EFE4D8;padding:24px 10px;font-family:Heebo,Arial,sans-serif">' +

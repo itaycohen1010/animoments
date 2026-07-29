@@ -181,6 +181,12 @@ export async function setOrderStatus(orderId, status) {
   await setDoc(doc(collection(db, 'orders'), orderId), { status }, { merge: true });
 }
 
+// Edit an order's contact details (admin fix for customer typos).
+export async function updateOrderDetails(orderId, fields) {
+  if (!ready()) throw new Error('Firebase not configured');
+  await setDoc(doc(collection(db, 'orders'), orderId), fields, { merge: true });
+}
+
 // Stable per-browser customer id (so repeat orders from the same device link up).
 export function getCustomerId() {
   try {

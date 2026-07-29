@@ -44,6 +44,7 @@ export default function App() {
   const [modal, setModal] = useState(null);          // 'how' | 'tips' | 'confirm' | 'blessing' | 'privacy' | 'accessibility' | 'terms'
   const [howStep, setHowStep] = useState(1);
   const [lookup, setLookup] = useState(false); // 'הסרטון שלי' retrieval screen
+  const lookupQueryRef = useRef('');
   const [gallery, setGallery] = useState(false); // 'גלריה' screen
   const [promoOpen, setPromoOpen] = useState(!!((config.promoPopup || '').trim() || (config.promoImage || '').trim()));
   const [settingsTick, setSettingsTick] = useState(0); // bumps after DB settings load to re-render
@@ -411,6 +412,8 @@ export default function App() {
     const onStorage = (e) => { if (e.key === 'zkm_grow_paid' && e.newValue) goPaid(); };
     window.addEventListener('message', onMsg);
     window.addEventListener('storage', onStorage);
+    // Deep link to "הסרטון שלי" (from the video-ready email): ?lookup=1&order=AM-...
+    if (params.get('lookup') === '1') { lookupQueryRef.current = params.get('order') || ''; setLookup(true); }
     return () => { window.removeEventListener('message', onMsg); window.removeEventListener('storage', onStorage); };
   }, []);
 
@@ -468,7 +471,7 @@ export default function App() {
       })()}
 
       {gallery && <GalleryScreen onHome={() => { setGallery(false); window.scrollTo(0, 0); }} />}
-      {lookup && <LookupScreen onHome={() => { setLookup(false); window.scrollTo(0, 0); }} />}
+      {lookup && <LookupScreen initialQuery={lookupQueryRef.current} onHome={() => { setLookup(false); window.scrollTo(0, 0); }} />}
 
       {!lookup && !gallery && step === 0 && <LandingScreen onStart={startOrder} onOpenHow={openHow} />}
 
