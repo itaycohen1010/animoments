@@ -3,7 +3,7 @@ import { config, colors as C } from '../config.js';
 import { saveQuote } from '../firebase.js';
 import { pillBtn, smallGhostBtn } from '../styles.js';
 
-// Screen 0 — landing page: hero, dictionary word, filmstrip, how-it-works, pricing, closing CTA.
+// Screen 0 — landing page: hero, how-it-works, pricing, dictionary word, filmstrip, testimonials, FAQ.
 export default function LandingScreen({ onStart, onOpenHow }) {
   const [lightbox, setLightbox] = useState(null); // { title, video }
   const [priceTick, setPriceTick] = useState(Date.now());
@@ -57,16 +57,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
           <p style={{ fontSize: 'clamp(1.05rem, 2vw, 1.25rem)', lineHeight: 1.75, color: C.body, maxWidth: 560, margin: '0 auto 30px', textWrap: 'pretty' }}>
             בוחרים תמונות, קובעים את הסדר — ואנחנו מחברים אותן לסרטון וידאו חלק ואיכותי.
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
-            {['✓ מוכן תוך 48 שעות', '✓ עובד ישירות מהטלפון', '✓ בלי להתקין כלום'].map((t) => (
-              <span key={t} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 999, padding: '8px 18px', fontSize: 14, fontWeight: 600, color: C.body, boxShadow: '0 4px 14px rgba(180,100,70,.08)' }}>{t}</span>
-            ))}
-          </div>
-          <button onClick={() => onStart()} data-track="צרו את הסרטון שלכם" style={{ ...pillBtn, fontSize: 19, padding: '18px 44px', animation: 'cta-pulse 2.2s ease-in-out infinite' }}>צרו את הסרטון שלכם</button>
-          <div style={{ marginTop: 14 }}>
-            <button onClick={() => onOpenHow(1)} data-track="צפייה בהדגמה" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 600, color: C.muted, textDecoration: 'underline', textUnderlineOffset: 4 }}>לצפייה בהדגמה קצרה 👀</button>
-          </div>
-          <div className="hero-media" style={{ maxWidth: 900, margin: '34px auto 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, flexWrap: 'nowrap' }}>
+          <div className="hero-media" style={{ maxWidth: 900, margin: '6px auto 40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, flexWrap: 'nowrap' }}>
             <div className="hero-reel-wrap hero-phone" data-track="הירו וידאו" onClick={() => setZoomVideo(true)} style={{ position: 'relative', zIndex: 2, width: 'clamp(190px, 46vw, 420px)', padding: 'clamp(7px, 1.6vw, 16px) clamp(8px, 1.8vw, 18px)', background: 'linear-gradient(160deg, #2E1F17, #17120F)', borderRadius: 'clamp(18px, 3vw, 32px)', boxShadow: '0 26px 60px rgba(59,42,32,.4)', cursor: 'pointer', flexShrink: 0 }}>
               <div style={{ position: 'absolute', top: '50%', right: 22, transform: 'translateY(-50%)', width: 6, height: 60, borderRadius: 6, background: 'rgba(255,255,255,.25)', zIndex: 3 }} />
               <div style={{ position: 'relative', borderRadius: 22, overflow: 'hidden', background: '#000', aspectRatio: '16/9' }}>
@@ -90,40 +81,14 @@ export default function LandingScreen({ onStart, onOpenHow }) {
               </div>
             )}
           </div>
-        </div>
-
-        {/* dictionary word — connected to the filmstrip */}
-        <div style={{ margin: '30px 0 0', background: C.filmDark, padding: '40px 24px 26px', textAlign: 'center', direction: 'rtl' }}>
-          <div style={{ maxWidth: 760, margin: '0 auto' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
-              <span style={{ fontWeight: 900, fontSize: 'clamp(1.5rem, 4vw, 2rem)', color: '#E8A13C' }}>זִכְרוֹנִימַצְיָה</span>
-              <span style={{ color: 'rgba(250,240,230,.6)', fontSize: '.9rem', fontStyle: 'italic' }}>שֵׁם עֶצֶם</span>
-            </div>
-            <p style={{ margin: '0 auto', color: 'rgba(250,240,230,.85)', fontSize: '1.02rem', lineHeight: 1.9, textWrap: 'pretty' }}> הַדֶּרֶךְ לְהַפוֹךְ אֶת הַזִּכְרוֹנוֹת הֲכִי כְּמוּסִים שֶׁלָּנוּ לְמַשֶּׁהוּ שֶׁאֶפְשָׁר לִרְאוֹת, לְשַׁתֵּף וְלִשְׁמֹר קָרוֹב לַלֵּב לָנֶצַח.</p>
-          </div>
-        </div>
-
-        {/* filmstrip marquee */}
-        <div style={{ position: 'relative', margin: 0, background: C.filmDark, boxShadow: '0 20px 50px rgba(59,42,32,.25)', direction: 'ltr', overflow: 'hidden' }}>
-          <div style={{ height: 16, backgroundImage: 'repeating-linear-gradient(90deg, transparent 0 12px, #FAF0E6 12px 24px, transparent 24px 34px)', opacity: .85 }} />
-          <div style={{ display: 'flex', width: 'max-content', animation: 'film-scroll 36s linear infinite' }}>
-            {[0, 1].map((half) => (
-              <div key={half} style={{ display: 'flex', gap: 10, padding: '8px 5px' }}>
-                {config.examples.map((ex, i) => (
-                  <a key={i} onClick={() => setLightbox({ title: ex.title, video: (ex.video || '').trim() })} style={{ position: 'relative', width: 220, height: 140, borderRadius: 6, overflow: 'hidden', background: 'linear-gradient(135deg, #C4502E, #E8A13C)', display: 'block', cursor: 'pointer' }}>
-                    <img src={ex.img} alt={`קטע מסרטון: ${ex.title}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'sepia(.22) saturate(1.12) brightness(.97)' }} />
-                    <span aria-hidden="true" style={{ position: 'absolute', inset: 0, margin: 'auto', width: 42, height: 42, borderRadius: '50%', background: 'rgba(255,255,255,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.accent, fontSize: 15, boxShadow: '0 6px 16px rgba(59,42,32,.25)' }}>▶</span>
-                    <span style={{ position: 'absolute', bottom: 0, right: 0, left: 0, direction: 'rtl', background: 'linear-gradient(to top, rgba(46,31,23,.85), transparent)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '18px 12px 8px', textAlign: 'right' }}>{ex.title}</span>
-                  </a>
-                ))}
-              </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
+            {['✓ מוכן תוך 48 שעות', '✓ עובד ישירות מהטלפון', '✓ בלי להתקין כלום'].map((t) => (
+              <span key={t} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 999, padding: '8px 18px', fontSize: 14, fontWeight: 600, color: C.body, boxShadow: '0 4px 14px rgba(180,100,70,.08)' }}>{t}</span>
             ))}
           </div>
-          <div style={{ height: 16, backgroundImage: 'repeating-linear-gradient(90deg, transparent 0 12px, #FAF0E6 12px 24px, transparent 24px 34px)', opacity: .85 }} />
+          <button onClick={() => onStart()} data-track="צרו את הסרטון שלכם" style={{ ...pillBtn, fontSize: 19, padding: '18px 44px', animation: 'cta-pulse 2.2s ease-in-out infinite' }}>צרו את הסרטון שלכם</button>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 14, padding: '22px 24px 4px', color: C.body, fontSize: 15, fontWeight: 800 }}>
-          <span>🎬 {(config.socialProof || {}).stat || '+300 סרטונים נוצרו'}</span>
-        </div>
+
       </div>
 
       {/* how it works */}
@@ -146,24 +111,6 @@ export default function LandingScreen({ onStart, onOpenHow }) {
         </div>
         <div style={{ textAlign: 'center', marginTop: 26 }}>
           <button onClick={() => onOpenHow(1)} data-track="צפייה בהדגמה" style={{ ...smallGhostBtn, fontSize: 15, padding: '11px 26px' }}>לצפייה בהדגמה קצרה 👀</button>
-        </div>
-      </div>
-
-      {/* testimonials — WhatsApp-style */}
-      <div id="testimonials" className="section-pad" style={{ maxWidth: 1080, margin: '0 auto', padding: '80px 24px 10px', scrollMarginTop: 90 }}>
-        <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.7rem, 4vw, 2.4rem)', textAlign: 'center', margin: '0 0 44px' }}>לקוחות מספרים...</h2>
-        <div className="testi-scroll" style={{ overflow: 'hidden', direction: 'ltr' }}>
-          <div className="testi-track" style={{ display: 'flex', width: 'max-content', gap: 18, alignItems: 'flex-start', animation: 'film-scroll 48s linear infinite' }}>
-            {[0, 1].map((half) => (
-              <div key={half} style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-                {(config.testimonialImages || []).map((src, i) => (
-                  <div key={i} className="testi-card" onClick={() => setZoomImg(src)} style={{ position: 'relative', width: 210, borderRadius: 18, overflow: 'hidden', boxShadow: '0 14px 36px rgba(59,42,32,.22)', flexShrink: 0, cursor: 'pointer', background: 'transparent', fontSize: 0, lineHeight: 0 }}>
-                    <img src={src} alt="תגובת לקוח/ה בוואטסאפ" loading="lazy" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -224,11 +171,55 @@ export default function LandingScreen({ onStart, onOpenHow }) {
         </div>
       </div>
 
-      {/* closing CTA */}
-      <div style={{ margin: '60px 0 0', background: `linear-gradient(135deg, #B04A2C, ${C.accent} 55%, #D9822E)`, padding: '76px 24px', textAlign: 'center' }}>
-        <h2 style={{ fontWeight: 900, fontSize: 'clamp(2rem, 5vw, 3rem)', lineHeight: 1.2, color: '#fff', margin: '0 0 10px', letterSpacing: '-0.01em' }}>מוכנים להתחיל?</h2>
-        <p style={{ color: '#FFE9D6', fontSize: '1.1rem', margin: '0 0 34px' }}>כל התהליך לוקח כחמש דקות.</p>
-        <button onClick={() => onStart()} data-track="CTA סיום — מוכנים להתחיל" style={{ border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 18, color: C.accent, background: '#fff', padding: '17px 46px', borderRadius: 999, boxShadow: '0 12px 30px rgba(59,42,32,.3)' }}>העלאת תמונות</button>
+      {/* dictionary word — connected to the filmstrip */}
+        <div style={{ margin: '30px 0 0', background: C.filmDark, padding: '40px 24px 26px', textAlign: 'center', direction: 'rtl' }}>
+          <div style={{ maxWidth: 760, margin: '0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+              <span style={{ fontWeight: 900, fontSize: 'clamp(1.5rem, 4vw, 2rem)', color: '#E8A13C' }}>זִכְרוֹנִימַצְיָה</span>
+              <span style={{ color: 'rgba(250,240,230,.6)', fontSize: '.9rem', fontStyle: 'italic' }}>שֵׁם עֶצֶם</span>
+            </div>
+            <p style={{ margin: '0 auto', color: 'rgba(250,240,230,.85)', fontSize: '1.02rem', lineHeight: 1.9, textWrap: 'pretty' }}> הַדֶּרֶךְ לְהַפוֹךְ אֶת הַזִּכְרוֹנוֹת הֲכִי כְּמוּסִים שֶׁלָּנוּ לְמַשֶּׁהוּ שֶׁאֶפְשָׁר לִרְאוֹת, לְשַׁתֵּף וְלִשְׁמֹר קָרוֹב לַלֵּב לָנֶצַח.</p>
+          </div>
+        </div>
+
+        {/* filmstrip marquee */}
+        <div style={{ position: 'relative', margin: 0, background: C.filmDark, boxShadow: '0 20px 50px rgba(59,42,32,.25)', direction: 'ltr', overflow: 'hidden' }}>
+          <div style={{ height: 16, backgroundImage: 'repeating-linear-gradient(90deg, transparent 0 12px, #FAF0E6 12px 24px, transparent 24px 34px)', opacity: .85 }} />
+          <div style={{ display: 'flex', width: 'max-content', animation: 'film-scroll 36s linear infinite' }}>
+            {[0, 1].map((half) => (
+              <div key={half} style={{ display: 'flex', gap: 10, padding: '8px 5px' }}>
+                {config.examples.map((ex, i) => (
+                  <a key={i} onClick={() => setLightbox({ title: ex.title, video: (ex.video || '').trim() })} style={{ position: 'relative', width: 220, height: 140, borderRadius: 6, overflow: 'hidden', background: 'linear-gradient(135deg, #C4502E, #E8A13C)', display: 'block', cursor: 'pointer' }}>
+                    <img src={ex.img} alt={`קטע מסרטון: ${ex.title}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'sepia(.22) saturate(1.12) brightness(.97)' }} />
+                    <span aria-hidden="true" style={{ position: 'absolute', inset: 0, margin: 'auto', width: 42, height: 42, borderRadius: '50%', background: 'rgba(255,255,255,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.accent, fontSize: 15, boxShadow: '0 6px 16px rgba(59,42,32,.25)' }}>▶</span>
+                    <span style={{ position: 'absolute', bottom: 0, right: 0, left: 0, direction: 'rtl', background: 'linear-gradient(to top, rgba(46,31,23,.85), transparent)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '18px 12px 8px', textAlign: 'right' }}>{ex.title}</span>
+                  </a>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div style={{ height: 16, backgroundImage: 'repeating-linear-gradient(90deg, transparent 0 12px, #FAF0E6 12px 24px, transparent 24px 34px)', opacity: .85 }} />
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 14, padding: '22px 24px 4px', color: C.body, fontSize: 15, fontWeight: 800 }}>
+          <span>🎬 {(config.socialProof || {}).stat || '+300 סרטונים נוצרו'}</span>
+        </div>
+
+      {/* testimonials — WhatsApp-style */}
+      <div id="testimonials" className="section-pad" style={{ maxWidth: 1080, margin: '0 auto', padding: '80px 24px 10px', scrollMarginTop: 90 }}>
+        <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.7rem, 4vw, 2.4rem)', textAlign: 'center', margin: '0 0 44px' }}>לקוחות מספרים...</h2>
+        <div className="testi-scroll" style={{ overflow: 'hidden', direction: 'ltr' }}>
+          <div className="testi-track" style={{ display: 'flex', width: 'max-content', gap: 18, alignItems: 'flex-start', animation: 'film-scroll 48s linear infinite' }}>
+            {[0, 1].map((half) => (
+              <div key={half} style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
+                {(config.testimonialImages || []).map((src, i) => (
+                  <div key={i} className="testi-card" onClick={() => setZoomImg(src)} style={{ position: 'relative', width: 210, borderRadius: 18, overflow: 'hidden', boxShadow: '0 14px 36px rgba(59,42,32,.22)', flexShrink: 0, cursor: 'pointer', background: 'transparent', fontSize: 0, lineHeight: 0 }}>
+                    <img src={src} alt="תגובת לקוח/ה בוואטסאפ" loading="lazy" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* FAQ accordion */}

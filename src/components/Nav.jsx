@@ -1,10 +1,19 @@
-import React from 'react';
+import React, { useRef, useState, useLayoutEffect } from 'react';
 import { config, colors as C } from '../config.js';
 
-// Sticky top nav: brand, anchor links (landing only), journey progress bar (steps 1-4).
+// Frozen top nav: brand, anchor links (landing only), journey progress bar (steps 1-4).
 export default function Nav({ step, journeyPct, journeyLabel, onHome, onStart, onLookup, lookup, onGallery, gallery, onSection }) {
+  const headRef = useRef(null);
+  const [spacerH, setSpacerH] = useState(0);
+  useLayoutEffect(() => {
+    const measure = () => { if (headRef.current) setSpacerH(headRef.current.offsetHeight); };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [step, journeyPct, lookup, gallery]);
   return (
-    <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(250,240,230,.88)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(196,80,46,.12)' }}>
+    <>
+    <div ref={headRef} style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: 'rgba(250,240,230,.88)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(196,80,46,.12)' }}>
       <div className="nav-row" style={{ maxWidth: 1080, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
         <button onClick={onHome} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: C.ink, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="nav-brand" style={{ fontWeight: 900, fontSize: 26, letterSpacing: '-0.01em' }}>{config.brandName}</span>
@@ -20,8 +29,8 @@ export default function Nav({ step, journeyPct, journeyLabel, onHome, onStart, o
           <>
             <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, fontSize: 15 }}>
               <a href="#how" onClick={(e) => onSection(e, 'how')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>איך זה עובד</a>
-              <a href="#testimonials" onClick={(e) => onSection(e, 'testimonials')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>לקוחות מספרים</a>
               <a href="#pricing" onClick={(e) => onSection(e, 'pricing')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>מחירים</a>
+              <a href="#testimonials" onClick={(e) => onSection(e, 'testimonials')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>לקוחות מספרים</a>
               <a href="#faq" onClick={(e) => onSection(e, 'faq')} style={{ color: C.body, padding: '8px 14px', borderRadius: 999 }}>שאלות ותשובות</a>
             </div>
             <button className="nav-cta" onClick={onStart} data-track="CTA נאב — התחלה" style={{ border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: '#fff', background: C.accent, padding: '10px 22px', borderRadius: 999, boxShadow: '0 6px 16px rgba(196,80,46,.28)', whiteSpace: 'nowrap' }}>מתחילים</button>
@@ -38,5 +47,7 @@ export default function Nav({ step, journeyPct, journeyLabel, onHome, onStart, o
         </div>
       )}
     </div>
+    <div style={{ height: spacerH }} />
+    </>
   );
 }
