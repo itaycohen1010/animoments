@@ -99,7 +99,7 @@ export default function LandingScreen({ onStart, onOpenHow }) {
           {[
             { n: '1', icon: '📷', title: 'בוחרים תמונות', text: 'ישירות מהטלפון או מהמחשב — בלי להתקין כלום.' },
             { n: '2', icon: '↔️', title: 'קובעים סדר', text: 'גוררים את התמונות לסדר שבו יופיעו בסרטון.' },
-            { n: '3', icon: '✅', title: 'שולחים', text: 'אנחנו מפיקים את הסרטון ומתקשרים תוך 48 שעות.' }
+            { n: '3', icon: '✅', title: 'שולחים', text: 'אנחנו מפיקים את הסרטון שלכם ומודיעים שהוא זמין באזור האישי - עד 48 שעות!' }
           ].map((s) => (
             <div key={s.n} style={{ background: '#fff', borderRadius: 24, padding: '30px 26px', boxShadow: '0 14px 40px rgba(180,100,70,.1)', position: 'relative' }}>
               <div style={{ fontWeight: 900, fontSize: 60, color: '#F5DFCC', position: 'absolute', top: 10, left: 22, lineHeight: 1 }}>{s.n}</div>

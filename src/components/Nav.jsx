@@ -47,7 +47,7 @@ export default function Nav({ step, journeyPct, journeyLabel, onHome, onStart, o
         </div>
       )}
     </div>
-    <div style={{ height: spacerH }} />
+    <div style={{ height: spacerH, minHeight: spacerH, flexShrink: 0 }} />
     </>
   );
 }

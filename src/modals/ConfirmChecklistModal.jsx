@@ -14,7 +14,7 @@ export default function ConfirmChecklistModal({ onConfirm, onClose }) {
         {[
           ['📶', 'התמונות חדות ובאיכות טובה'],
           ['↔️', 'הסדר שקבעתם הוא הסדר שיופיע בסרטון'],
-          ['💛', 'התמונות מתאימות לשיתוף']
+          ['💛', 'התמונות הולמות ובאישור המשתתפים']
         ].map(([icon, text]) => (
           <div key={text} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: C.cream, borderRadius: 14, padding: '10px 14px' }}>
             <span>{icon}</span><span style={{ color: C.body, fontSize: '.92rem' }}>{text}</span>
