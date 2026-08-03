@@ -17,7 +17,7 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
   const field = (label, key, type, placeholder, invalid, noPaste) => (
     <div>
       <label style={{ display: 'block', fontWeight: 700, fontSize: '.95rem', marginBottom: 6 }}>{label}</label>
-      <input type={type} value={form[key] || ''} onChange={(e) => { setForm({ ...form, [key]: e.target.value }); setFormError(null); }} onPaste={noPaste ? (e) => e.preventDefault() : undefined} placeholder={placeholder} style={inputStyle(invalid)} />
+      <input className="ph-no-capture" type={type} value={form[key] || ''} onChange={(e) => { setForm({ ...form, [key]: e.target.value }); setFormError(null); }} onPaste={noPaste ? (e) => e.preventDefault() : undefined} placeholder={placeholder} style={inputStyle(invalid)} />
     </div>
   );
 
@@ -46,7 +46,7 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
         {/* optional blessing — inline, not a separate step */}
         <div style={{ marginTop: 4 }}>
           <label style={{ display: 'block', fontWeight: 700, fontSize: '.95rem', marginBottom: 6 }}>ברכה אישית לסרטון <span style={{ color: C.muted, fontWeight: 400 }}>(אופציונלי)</span></label>
-          <textarea value={form.blessing || ''} onChange={(e) => setForm({ ...form, blessing: e.target.value.slice(0, BLESSING_MAX) })} rows={3}
+          <textarea className="ph-no-capture" value={form.blessing || ''} onChange={(e) => setForm({ ...form, blessing: e.target.value.slice(0, BLESSING_MAX) })} rows={3}
             placeholder="כמה משפטים מהלב שיופיעו בסוף הסרטון — לדוגמה: לסבתא רחל היקרה, אוהבים תמיד ❤️"
             style={{ width: '100%', boxSizing: 'border-box', direction: 'rtl', resize: 'none', border: `1.5px solid ${C.borderStrong}`, background: '#FFFDFA', borderRadius: 14, padding: '13px 16px', fontSize: 16, color: C.ink, outline: 'none', fontFamily: "'Heebo', sans-serif", lineHeight: 1.7 }} />
           <div style={{ textAlign: 'left', fontSize: '.8rem', fontWeight: 700, color: (form.blessing || '').length >= BLESSING_MAX ? C.accentDark : C.muted, marginTop: 4 }}>{(form.blessing || '').length}/{BLESSING_MAX}</div>

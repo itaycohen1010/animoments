@@ -142,6 +142,16 @@ export const config = {
   contactEmail: 'myanimoments@gmail.com',
   contactPhone: '055-274-5188',
 
+  // PostHog product analytics — runs ALONGSIDE the Firestore analytics (not a
+  // replacement). Paste your Project API key to enable; leave key empty to disable
+  // entirely (the site then makes zero PostHog calls).
+  posthog: {
+    key: 'phc_uZaZRLWsnFUu8P4S4onHMppPBQP9YKL8FKfV9WDpqKNf',
+    host: 'https://eu.i.posthog.com', // use 'https://us.i.posthog.com' for US cloud
+    autocapture: true,                // auto-capture clicks/inputs in addition to named events
+    sessionRecording: true,           // set false to disable session replays
+  },
+
   // Social links (footer). Empty string hides that icon.
   socialLinks: {
     facebook: 'https://www.facebook.com/share/1EnD91arte/?mibextid=wwXIfr',
