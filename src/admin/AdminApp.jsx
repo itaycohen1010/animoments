@@ -7,6 +7,10 @@ const ACCENT = '#C4502E', INK = '#3B2A20', BODY = '#6E5240', CARD = '#fff', BG =
 
 const STATUS = { new: 'חדש', in_progress: 'בעבודה', done: 'הושלם' };
 
+// module-level fetch caches (stale-while-revalidate, 60s TTL) — survive tab switches
+const _monCache = { data: null, at: 0 };
+const _ordCache = { data: null, at: 0 };
+
 function Login({ onDone }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -538,10 +542,20 @@ function MonitoringPanel() {
   const [clickCatSel, setClickCatSel] = useState('הכול');
 
   const load = async () => {
-    setSessions(null);
-    try { await rollupOldSessions(7); } catch (e) { /* ignore */ }
+    // stale-while-revalidate: render cached data instantly, refresh in background
+    const cached = _monCache.data;
+    if (cached) { setDailyDocs(cached.dd); setLeadDocs(cached.ld); setSessions(cached.ss); }
+    else setSessions(null);
+    if (cached && Date.now() - _monCache.at < 60000) return; // fresh enough, skip network
     const [ss, dd, ld] = await Promise.all([listSessions(1000), listDailyStats(120), listLeads(1000)]);
+    _monCache.data = { ss, dd, ld }; _monCache.at = Date.now();
     setDailyDocs(dd); setLeadDocs(ld); setSessions(ss);
+    // roll up old sessions AFTER the UI is populated, at most once per day, non-blocking
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem('lastRollup') !== today) {
+      localStorage.setItem('lastRollup', today);
+      rollupOldSessions(7).catch(() => {});
+    }
   };
   useEffect(() => { load(); }, []);
 
@@ -976,8 +990,12 @@ function Dashboard() {
   const [filter, setFilter] = useState('all');
 
   const load = async () => {
+    const cached = _ordCache.data;
+    if (cached) { setProductsById(cached.map); setOrders(cached.o); }
+    if (cached && Date.now() - _ordCache.at < 60000) return;
     const [o, p] = await Promise.all([listOrders(), listProducts()]);
     const map = {}; p.forEach((x) => { map[x.orderId] = x; });
+    _ordCache.data = { o, map }; _ordCache.at = Date.now();
     setProductsById(map); setOrders(o);
   };
   useEffect(() => { load(); }, []);
