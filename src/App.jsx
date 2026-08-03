@@ -4,7 +4,7 @@ import { legalDocs } from './legal.js';
 import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, saveLead, markLeadConverted, markConverted, markGalleryView, trackHeartbeat, trackClick, flushClicks, trackScroll } from './firebase.js';
 
 import Nav from './components/Nav.jsx';
-import { initPosthog, phCapture, phIdentify } from './posthog.js';
+import { initPosthog, phCapture, phIdentify, phPageview } from './posthog.js';
 import Footer from './components/Footer.jsx';
 
 import LandingScreen from './screens/LandingScreen.jsx';
@@ -75,7 +75,12 @@ export default function App() {
 
   // analytics: start a session on first load, and record every step change for the funnel
   useEffect(() => { initPosthog({ app: 'site' }); startSession(); }, []);
-  useEffect(() => { trackStep(step); phCapture('step', { step }); }, [step]);
+  useEffect(() => {
+    trackStep(step);
+    phCapture('step', { step });
+    const names = ['landing', 'upload', 'details', 'payment', 'result'];
+    phPageview(lookup ? 'lookup' : gallery ? 'gallery' : (names[step] || 'step-' + step));
+  }, [step, lookup, gallery]);
   // scroll depth (landing only) — throttled, records the furthest % reached
   useEffect(() => {
     if (step !== 0 || lookup || gallery) return;

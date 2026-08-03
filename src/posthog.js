@@ -7,7 +7,13 @@ import { config } from './config.js';
 
 const CFG = config.posthog || {};
 const KEY = (CFG.key || '').trim();
-const HOST = (CFG.host || 'https://eu.i.posthog.com').trim(); // EU cloud by default
+const UI_HOST = (CFG.host || 'https://eu.i.posthog.com').trim(); // real PostHog host (for dashboard links)
+// First-party reverse proxy on our own domain (see vercel.json rewrites). Using a
+// same-origin path defeats iOS Safari ITP / mobile content-blockers that silently
+// drop requests to eu.i.posthog.com — the #1 reason mobile sessions go uncaptured.
+// On localhost there is no proxy, so fall back to the direct host in dev.
+const isLocal = typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+const HOST = isLocal ? UI_HOST : '/ingest';
 
 let _ready = false;
 
@@ -27,8 +33,10 @@ export function initPosthog(opts) {
   })(document, window.posthog || []);
   window.posthog.init(KEY, {
     api_host: HOST,
+    ui_host: UI_HOST,
     person_profiles: 'identified_only',
-    capture_pageview: autocap, // no auto pageview for admin (autocap=false)
+    capture_pageview: false, // SPA: pageviews fired manually per step (see phPageview)
+    capture_pageleave: autocap, // accurate time-on-page / bounce
     autocapture: autocap, // auto-capture clicks/inputs (off for admin)
     session_recording: recording ? {
       maskAllInputs: true,                 // never record any typed input values
@@ -48,4 +56,14 @@ export function phCapture(name, props) {
 
 export function phIdentify(id, props) {
   try { if (_ready && window.posthog && id) window.posthog.identify(String(id), props || {}); } catch (e) { /* silent */ }
+}
+
+// Virtual pageview for the SPA's step navigation (no real URL change), so PostHog
+// Web Analytics and pageview funnels see each funnel step as its own "page".
+export function phPageview(name) {
+  try {
+    if (_ready && window.posthog) {
+      window.posthog.capture('$pageview', { $current_url: location.origin + '/' + (name || '') });
+    }
+  } catch (e) { /* silent */ }
 }
