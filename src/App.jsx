@@ -4,7 +4,7 @@ import { legalDocs } from './legal.js';
 import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, trackLead, saveLead, markLeadConverted, markConverted, markGalleryView, trackHeartbeat, trackClick, flushClicks, trackScroll } from './firebase.js';
 
 import Nav from './components/Nav.jsx';
-import { initPosthog, phCapture, phIdentify, phPageview } from './posthog.js';
+import { initClarity, clarityTag, clarityEvent } from './clarity.js';
 import Footer from './components/Footer.jsx';
 
 import LandingScreen from './screens/LandingScreen.jsx';
@@ -74,12 +74,11 @@ export default function App() {
   }, []); // eslint-disable-line
 
   // analytics: start a session on first load, and record every step change for the funnel
-  useEffect(() => { initPosthog({ app: 'site' }); startSession(); }, []);
+  useEffect(() => { initClarity(); startSession(); }, []);
   useEffect(() => {
     trackStep(step);
-    phCapture('step', { step });
     const names = ['landing', 'upload', 'details', 'payment', 'result'];
-    phPageview(lookup ? 'lookup' : gallery ? 'gallery' : (names[step] || 'step-' + step));
+    clarityTag('funnel_step', lookup ? 'lookup' : gallery ? 'gallery' : (names[step] || 'step-' + step));
   }, [step, lookup, gallery]);
   // scroll depth (landing only) — throttled, records the furthest % reached
   useEffect(() => {
@@ -110,7 +109,6 @@ export default function App() {
       if (!active) { active = true; }
       const name = el.getAttribute('data-track') || el.getAttribute('aria-label') || (el.textContent || '').trim().slice(0, 30) || el.tagName.toLowerCase();
       trackClick(name);
-      phCapture('click', { label: name, step, gallery: !!gallery });
       clearTimeout(idleTimer);
       idleTimer = setTimeout(() => { active = false; }, IDLE_MS);
     };
@@ -255,8 +253,6 @@ export default function App() {
     const err = validateDetails();
     if (err) { setFormError(err); return; }
     trackLead({ name: form.name, phone: form.phone, email: form.email });
-    phIdentify(form.phone || form.email, { name: form.name, email: form.email, phone: form.phone });
-    phCapture('lead_submitted', { packageKey: pkg.key, photoCount: photos.length });
     saveLead({ orderId: getOrderId(), name: form.name, phone: form.phone, email: form.email, packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price, photoCount: photos.length });
     setStep(3); // details → payment
   };
@@ -325,7 +321,7 @@ export default function App() {
     sendConfirmationEmail();
     saveOrderOnce();
     markConverted(orderIdRef.current);
-    phCapture('purchase', { orderId: orderIdRef.current, packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price });
+    clarityEvent('purchase');
     markLeadConverted(getOrderId());
     setStep(4); setResult('processing'); setUploadedCount(0);
     if (!cloudinaryConfigured) {
