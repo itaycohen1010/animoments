@@ -285,9 +285,10 @@ function SettingsEditor() {
                 <span style={{ fontWeight: 800, fontSize: '1.05rem', color: INK }}>{p.name || '—'}</span>
                 {p.featured && <span style={{ fontSize: 11, fontWeight: 800, color: '#5C3A10', background: 'linear-gradient(135deg,#E8A13C,#F2B45C)', borderRadius: 999, padding: '2px 8px' }}>הכי אהובה ❤️</span>}
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '8px 0 6px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 8, margin: '8px 0 6px' }}>
                 <span style={{ fontWeight: 900, fontSize: '1.6rem', color: ACCENT }}>₪{Math.round((p.price || 0) * (100 - (p.discount || 0)) / 100)}</span>
                 {p.discount ? <span style={{ color: '#A78B74', fontWeight: 700, fontSize: '.95rem', textDecoration: 'line-through' }}>₪{p.price}</span> : null}
+                {p.discount ? <span style={{ background: '#D9822E', color: '#FFF8F0', fontWeight: 900, fontSize: '.95rem', letterSpacing: '.5px', padding: '4px 10px', borderRadius: 10, whiteSpace: 'nowrap', transform: 'rotate(-3deg)', boxShadow: '0 4px 12px rgba(217,130,46,.4)', alignSelf: 'center' }}>{p.discount}%</span> : null}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, color: BODY, fontSize: '.85rem' }}>
                 {(p.features || []).map((f, j) => <span key={j}>✓ {f}</span>)}

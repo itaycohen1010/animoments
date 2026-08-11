@@ -142,9 +142,10 @@ export default function LandingScreen({ onStart, onOpenHow }) {
                 <span style={{ color: C.accent, fontSize: 20, fontWeight: 900, transition: 'transform .2s ease', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>⌄</span>
               </div>
               <div style={{ maxHeight: open ? 400 : 0, overflow: 'hidden', transition: 'max-height .3s ease' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '16px 0 4px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 10, margin: '16px 0 4px' }}>
                   <span style={{ fontWeight: 900, fontSize: '2rem', color: C.accent }}>₪{p.price}</span>
                   {p.basePrice !== p.price && <span style={{ color: '#A78B74', fontWeight: 700, fontSize: '1.1rem', textDecoration: 'line-through' }}>₪{p.basePrice}</span>}
+                  {p.basePrice !== p.price && <span style={{ background: '#D9822E', color: '#FFF8F0', fontWeight: 900, fontSize: '1.05rem', letterSpacing: '.5px', padding: '5px 12px', borderRadius: 10, whiteSpace: 'nowrap', transform: 'rotate(-3deg)', boxShadow: '0 4px 12px rgba(217,130,46,.4)', alignSelf: 'center' }}>{Math.round((1 - p.price / p.basePrice) * 100)}%</span>}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, color: C.body, fontSize: '.98rem', margin: '14px 0 22px' }}>
                   {p.features.map((f) => <span key={f}>✓ {f}</span>)}
