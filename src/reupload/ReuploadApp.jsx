@@ -68,7 +68,6 @@ export default function ReuploadApp() {
             fd.append('asset_folder', folder); // dynamic-folder mode
             fd.append('tags', folder.split('/')[1]);
             fd.append('public_id', String(i + 1).padStart(3, '0'));
-            fd.append('display_name', String(i + 1).padStart(3, '0'));
             // zero-padded so Cloudinary's A–Z sort matches the real order
             fd.append('context', `order=${i + 1}`);
             res = await fetch(`${base}/image/upload`, { method: 'POST', body: fd });

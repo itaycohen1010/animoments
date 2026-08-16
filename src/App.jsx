@@ -372,9 +372,6 @@ export default function App() {
           fd.append('asset_folder', folder);
           fd.append('tags', tag);
           fd.append('public_id', String(i + 1).padStart(3, '0')); // 001, 002 … sorts correctly
-          // the preset has "use filename as display name", which would show the
-          // original camera name in the Media Library — force the ordered name.
-          fd.append('display_name', String(i + 1).padStart(3, '0'));
           // zero-padded so Cloudinary's A–Z sort matches the real order (001, 002 … 010)
           fd.append('context', `order=${i + 1}|from=${form.name.trim()}|phone=${form.phone.trim()}`);
           res = await fetch(`${base}/image/upload`, { method: 'POST', body: fd });
