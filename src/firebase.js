@@ -312,6 +312,25 @@ export async function setQuoteSent(id, sent) {
   await setDoc(doc(collection(db, 'quotes'), id), { sent: !!sent, status: sent ? 'sent' : 'new' }, { merge: true });
 }
 
+// A customer re-uploaded photos for an existing order.
+// (Kept for future use — the simple upload page does not write to the DB.)
+export async function saveReupload(r) {
+  if (!ready() || !r || !r.orderId) return;
+  try {
+    await setDoc(doc(collection(db, 'orders'), r.orderId), {
+      orderId: r.orderId,
+      folder: r.folder || '',
+      photoCount: r.photoCount ?? null,
+      ...(r.mood ? { musicMood: r.mood } : {}),
+      ...(r.name ? { name: r.name } : {}),
+      ...(r.phone ? { phone: r.phone } : {}),
+      reuploaded: true,
+      reuploadedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (e) { console.warn('saveReupload failed', e); }
+}
+
 // Write one order document. Never throws — a DB hiccup must not break the flow.
 export async function saveOrder(order) {
   if (!ready()) return;
