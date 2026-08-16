@@ -230,6 +230,21 @@ function SettingsEditor() {
         </div>
         <div style={{ marginBottom: 14 }}><span style={label}>טיימר ספירה לאחור (תאריך ושעת סיום — ריק = ללא)</span><input type="datetime-local" style={{ ...inp, direction: 'ltr', maxWidth: 260 }} value={data.promoDeadline || ''} onChange={(e) => set('promoDeadline', e.target.value)} /><div style={{ fontSize: 12, color: BODY, marginTop: 4 }}>יוצג בבאנר העליון עם ספירה חיה. נעלם אוטומטית כשמסתיים.</div></div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, cursor: 'pointer' }}><input type="checkbox" checked={!!data.promoTimerOnCards} onChange={(e) => set('promoTimerOnCards', e.target.checked)} style={{ width: 18, height: 18, accentColor: ACCENT }} /><span style={{ fontSize: 14, color: INK, fontWeight: 700 }}>הצגת הטיימר גם מעל כרטיסי המחיר</span></label>
+        <div style={{ background: '#FBE4D7', borderRadius: 14, padding: '14px 16px', marginBottom: 18 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input type="checkbox" checked={!!data.reuploadOpen} onChange={(e) => set('reuploadOpen', e.target.checked)} style={{ width: 18, height: 18, accentColor: ACCENT }} />
+            <span style={{ fontSize: 14, color: INK, fontWeight: 800 }}>פתיחת דף העלאת תמונות ידנית</span>
+          </label>
+          <div style={{ fontSize: 12.5, color: BODY, lineHeight: 1.7, marginTop: 6 }}>
+            כשסגור — הדף חסום ומציג הודעה. פתחו רק כשצריך לשלוח ללקוח קישור להעלאה מחדש, וסגרו אחרי שהתמונות התקבלו.
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+            <a href="/reupload.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>פתיחת הדף ↗</a>
+            <button onClick={() => { try { navigator.clipboard.writeText(location.origin + '/reupload.html'); } catch (e) {} }}
+              style={{ border: `1.5px solid ${ACCENT}`, background: 'transparent', color: ACCENT, cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 13, padding: '6px 14px', borderRadius: 999 }}>העתקת הקישור</button>
+          </div>
+        </div>
+
         <div style={{ marginBottom: 14 }}><span style={label}>תווית מבצע ליד טיימר המחירים (טקסט חופשי, אופציונלי)</span><input style={inp} value={data.promoCardLabel || ''} onChange={(e) => set('promoCardLabel', e.target.value)} placeholder="למשל: 🔥 מבצע השקה" /></div>
         <div style={{ display: 'flex', gap: 20, marginBottom: 14, flexWrap: 'wrap' }}>
           <div><span style={label}>צבע רקע טיימר המחירים</span><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 30, height: 30, borderRadius: 8, border: '2px solid #E4C4A8', background: data.promoCardBg || '#C4502E', flexShrink: 0 }} /><input style={{ ...ltrInp, width: 110 }} value={data.promoCardBg || ''} onChange={(e) => set('promoCardBg', e.target.value)} placeholder="#C4502E" /></div></div>
@@ -500,12 +515,20 @@ function QuotesPanelPlaceholder() { return null; }
 
 function LeadsPanel() {
   const [items, setItems] = useState(null);
+  const [paidIds, setPaidIds] = useState(null); // order ids that actually paid — source of truth
   const [filter, setFilter] = useState('all'); // all | notpaid | paid
-  useEffect(() => { listLeads(500).then(setItems); }, []);
+  useEffect(() => {
+    listLeads(500).then(setItems);
+    // derive paid status from the ORDERS collection, so a lead can never show
+    // "לא שילם" when a paid order exists for the same order id.
+    listOrders().then((o) => setPaidIds(new Set((o || []).filter((x) => x.status === 'paid').map((x) => x.orderId))))
+      .catch(() => setPaidIds(new Set()));
+  }, []);
+  const isPaid = (l) => !!(l.converted || (paidIds && (paidIds.has(l.orderId) || paidIds.has(l.id))));
   const toMs = (t) => (t && t.seconds ? t.seconds * 1000 : 0);
   const card = { background: CARD, borderRadius: 16, padding: '16px 20px', boxShadow: '0 14px 40px rgba(180,100,70,.12)', marginBottom: 12, textAlign: 'right' };
   if (items === null) return <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>טוען…</div>;
-  const shown = items.filter((l) => filter === 'all' || (filter === 'paid' ? l.converted : !l.converted));
+  const shown = items.filter((l) => filter === 'all' || (filter === 'paid' ? isPaid(l) : !isPaid(l)));
   return (
     <div style={{ maxWidth: 820, margin: '0 auto' }}>
       <div style={{ display: 'flex', gap: 6, background: '#F3E7D8', borderRadius: 999, padding: 4, width: 'fit-content', margin: '0 auto 16px' }}>
@@ -514,9 +537,9 @@ function LeadsPanel() {
         ))}
       </div>
       {!shown.length ? <div style={{ color: BODY, padding: 40, textAlign: 'center' }}>אין לידים בטווח שנבחר.</div> : shown.map((l) => (
-        <div key={l.id} style={{ ...card, border: l.converted ? '1.5px solid #BFDCB4' : `1.5px solid ${BORDER}` }}>
+        <div key={l.id} style={{ ...card, border: isPaid(l) ? '1.5px solid #BFDCB4' : `1.5px solid ${BORDER}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 6, alignItems: 'center' }}>
-            <span style={{ fontWeight: 800, color: INK, fontSize: 16 }}>{l.name || '(ללא שם)'}{l.converted
+            <span style={{ fontWeight: 800, color: INK, fontSize: 16 }}>{l.name || '(ללא שם)'}{isPaid(l)
               ? <span style={{ marginRight: 8, fontSize: 11, fontWeight: 700, color: '#3E6B33', background: '#EDF5EA', borderRadius: 999, padding: '2px 10px' }}>שילם/ה ✓</span>
               : <span style={{ marginRight: 8, fontSize: 11, fontWeight: 700, color: '#A83E20', background: '#FBE4D7', borderRadius: 999, padding: '2px 10px' }}>לא שילם/ה</span>}</span>
             <span style={{ color: BODY, fontSize: 12 }}>{toMs(l.createdAt) ? new Date(toMs(l.createdAt)).toLocaleString('he-IL') : ''}</span>

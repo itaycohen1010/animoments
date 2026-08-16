@@ -54,7 +54,7 @@ export const config = {
 
   // Cloudinary (unsigned upload). Leave empty for demo mode (no real upload).
   cloudinary: {
-    cloudName: 'dmxkoz4jo',
+    cloudName: 'rl1csupb',
     uploadPreset: 'videoOrders'  // must be UNSIGNED
   },
 

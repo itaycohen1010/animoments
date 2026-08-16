@@ -19,6 +19,7 @@ import LegalModal from './modals/LegalModal.jsx';
 import HowItWorksModal from './modals/HowItWorksModal.jsx';
 import TipsModal from './modals/TipsModal.jsx';
 import ConfirmChecklistModal from './modals/ConfirmChecklistModal.jsx';
+import { pillBtn } from './styles.js';
 
 // ===================================================================
 // App — state + flow logic; all UI lives in screens/ and modals/
@@ -28,6 +29,8 @@ export default function App() {
   const defaultPkg = config.packages.find((p) => p.key === config.defaultPackageKey) || config.packages[1];
 
   const [step, setStep] = useState(0);
+  const [prep, setPrep] = useState(null); // null | 'uploading' | 'failed' — pre-payment upload gate
+  const [uploadErr, setUploadErr] = useState('');
   const [nowTick, setNowTick] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNowTick(Date.now()), 1000); return () => clearInterval(t); }, []);
   const [pkgKey, setPkgKey] = useState(defaultPkg.key);
@@ -249,12 +252,23 @@ export default function App() {
     setStep(1); // photos first — tips no longer auto-open
   };
 
-  const detailsToPhotos = () => {
+  // "מעבר לתשלום": upload the photos FIRST, blocking the payment page behind an
+  // overlay, so a customer never pays before their files are safely in Cloudinary.
+  const detailsToPhotos = async () => {
     const err = validateDetails();
     if (err) { setFormError(err); return; }
     trackLead({ name: form.name, phone: form.phone, email: form.email });
     saveLead({ orderId: getOrderId(), name: form.name, phone: form.phone, email: form.email, packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price, photoCount: photos.length });
-    setStep(3); // details → payment
+    savePendingOrder();
+    setUploadedCount(0);
+    setPrep('uploading');
+    uploadPromiseRef.current = uploadPhotos();
+    const ok = await uploadPromiseRef.current;
+    uploadPromiseRef.current = null;
+    if (!ok) { setPrep('failed'); return; }
+    setPrep(null);
+    setStep(3);
+    window.scrollTo(0, 0);
   };
 
   const photosToPayment = () => {
@@ -314,31 +328,21 @@ export default function App() {
     });
   };
 
-  // ---------- upload (runs AFTER payment) ----------
-  const startUpload = async () => {
-    // Fire order emails the moment payment is confirmed — before upload — so a paid
-    // order is never lost even if Cloudinary is down.
-    sendConfirmationEmail();
-    saveOrderOnce();
-    markConverted(orderIdRef.current);
-    clarityEvent('purchase');
-    markLeadConverted(getOrderId());
-    setStep(4); setResult('processing'); setUploadedCount(0);
+  // ---------- upload (runs before the payment page opens) ----------
+  const uploadPromiseRef = useRef(null);
+
+  // Pure upload: photos → Cloudinary. No email, no DB, no screen change.
+  // Resolves true on success, false on failure. Safe to call again to retry.
+  const uploadPhotos = async () => {
     if (!cloudinaryConfigured) {
-      // demo mode
-      let i = 0;
+      // demo mode — simulate progress
       const total = photos.length;
-      const t = setInterval(() => {
-        i++;
-        if (config.simulateFailure && i >= Math.ceil(total / 2)) { clearInterval(t); setResult('failed'); return; }
-        if (i >= total) {
-          clearInterval(t); setUploadedCount(total);
-          setTimeout(() => { setResult('done'); }, 500);
-          return;
-        }
+      for (let i = 1; i <= total; i++) {
+        await new Promise((r) => setTimeout(r, 420));
+        if (config.simulateFailure && i >= Math.ceil(total / 2)) return false;
         setUploadedCount(i);
-      }, 420);
-      return;
+      }
+      return true;
     }
 
     if (!uploadFolderRef.current) {
@@ -352,37 +356,80 @@ export default function App() {
     const tag = folder.split('/')[1];
     const base = `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudinary.cloudName)}`;
 
-    try {
-      for (let i = 0; i < photos.length; i++) {
-        const p = photos[i];
-        if (p.uploaded) { setUploadedCount(i + 1); continue; }
-        // upload with up to 3 attempts (network hiccups / transient Cloudinary errors)
-        let res = null, lastErr = null;
-        for (let attempt = 0; attempt < 3; attempt++) {
-          try {
-            const fd = new FormData();
-            fd.append('file', p.file);
-            fd.append('upload_preset', config.cloudinary.uploadPreset);
-            fd.append('folder', folder);
-            fd.append('tags', tag);
-            fd.append('public_id', String(i + 1)); // filename in Cloudinary = position in the video order
-            fd.append('context', `order=${i + 1}|from=${form.name.trim()}|phone=${form.phone.trim()}`);
-            res = await fetch(`${base}/image/upload`, { method: 'POST', body: fd });
-            if (res.ok) break;
-            lastErr = new Error('upload failed: ' + res.status);
-          } catch (e) { lastErr = e; }
-          await new Promise(r => setTimeout(r, 1200 * (attempt + 1))); // backoff before retry
-        }
-        if (!res || !res.ok) throw (lastErr || new Error('upload failed'));
-        p.uploaded = true;
-        setUploadedCount(i + 1);
+    // Upload one photo with up to 3 attempts. public_id is fixed by index, so
+    // running several in parallel can never scramble the order in the video.
+    const uploadOne = async (p, i) => {
+      if (p.uploaded) return;
+      let res = null, lastErr = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const fd = new FormData();
+          fd.append('file', p.file);
+          fd.append('upload_preset', config.cloudinary.uploadPreset);
+          fd.append('folder', folder);
+          // this account uses Cloudinary's dynamic-folder mode, where `folder` alone
+          // is ignored — asset_folder is what actually places the files.
+          fd.append('asset_folder', folder);
+          fd.append('tags', tag);
+          fd.append('public_id', String(i + 1).padStart(3, '0')); // 001, 002 … sorts correctly
+          // the preset has "use filename as display name", which would show the
+          // original camera name in the Media Library — force the ordered name.
+          fd.append('display_name', String(i + 1).padStart(3, '0'));
+          // zero-padded so Cloudinary's A–Z sort matches the real order (001, 002 … 010)
+          fd.append('context', `order=${i + 1}|from=${form.name.trim()}|phone=${form.phone.trim()}`);
+          res = await fetch(`${base}/image/upload`, { method: 'POST', body: fd });
+          if (res.ok) break;
+          let msg = '';
+          try { msg = (await res.clone().json())?.error?.message || ''; } catch (e2) { /* ignore */ }
+          // preset has overwrite:false — a retry of a photo that actually landed
+          // comes back as "already exists", which for us means success.
+          if (/already exists/i.test(msg)) { p.uploaded = true; setUploadedCount((n) => n + 1); return; }
+          lastErr = new Error(`${res.status}${msg ? ' · ' + msg : ''}`);
+        } catch (e) { lastErr = e; }
+        await new Promise((r) => setTimeout(r, 1200 * (attempt + 1))); // backoff before retry
       }
-      // (customer PII is NOT stored in Cloudinary — details are sent by email only)
-      setTimeout(() => { setResult('done'); }, 400);
+      if (!res || !res.ok) throw (lastErr || new Error('upload failed'));
+      p.uploaded = true;
+      setUploadedCount((n) => n + 1);
+    };
+
+    try {
+      // batches of 3 — meaningfully faster than one-by-one, gentle on mobile
+      // connections and on Cloudinary's rate limit.
+      const BATCH = 5;
+      setUploadedCount(photos.filter((p) => p.uploaded).length);
+      for (let i = 0; i < photos.length; i += BATCH) {
+        await Promise.all(photos.slice(i, i + BATCH).map((p, k) => uploadOne(p, i + k)));
+      }
+      return true;
     } catch (err) {
       console.warn('Cloudinary upload error', err);
-      setResult('failed');
+      setUploadErr(String((err && err.message) || err));
+      return false;
     }
+  };
+
+  // ---------- payment return: email + order only (photos already uploaded) ----------
+  const startUpload = async () => {
+    sendConfirmationEmail();
+    saveOrderOnce();
+    markConverted(orderIdRef.current);
+    markLeadConverted(getOrderId());
+    clarityEvent('purchase');
+    setStep(4);
+    setUploadedCount(photos.length);
+    setResult('done');
+  };
+
+  const retryUpload = async () => {
+    setPrep('uploading');
+    uploadPromiseRef.current = uploadPhotos();
+    const ok = await uploadPromiseRef.current;
+    uploadPromiseRef.current = null;
+    if (!ok) { setPrep('failed'); return; }
+    setPrep(null);
+    setStep(3);
+    window.scrollTo(0, 0);
   };
 
   const confirmPayment = () => {
@@ -424,6 +471,7 @@ export default function App() {
   }, []);
 
   const resetAll = () => {
+    uploadPromiseRef.current = null;
     uploadFolderRef.current = null;
     detailsUploadedRef.current = false;
     orderIdRef.current = null;
@@ -510,7 +558,11 @@ export default function App() {
       {step === 4 && (
         <ResultScreen result={result} uploadedCount={uploadedCount} photos={photos}
           cloudinaryConfigured={cloudinaryConfigured} orderId={orderIdRef.current}
-          onRetry={startUpload} onReset={resetAll} />
+          onRetry={async () => {
+            setResult('processing');
+            const ok = await uploadPhotos();
+            if (ok) setTimeout(() => setResult('done'), 400); else setResult('failed');
+          }} onReset={resetAll} />
       )}
 
       <Footer onOpenLegal={(key) => setModal(key)} />
@@ -546,6 +598,51 @@ export default function App() {
       {modal === 'privacy' && <LegalModal doc={legalDocs.privacy} onClose={() => setModal(null)} />}
       {modal === 'accessibility' && <LegalModal doc={legalDocs.accessibility} onClose={() => setModal(null)} />}
       {modal === 'terms' && <LegalModal doc={legalDocs.terms} onClose={() => setModal(null)} />}
+
+      {/* pre-payment upload gate — blocks the payment page until the photos are safe */}
+      {prep && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(59,42,32,.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, direction: 'rtl' }}>
+          <div style={{ background: '#fff', borderRadius: 24, padding: '38px 28px', maxWidth: 420, width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(59,42,32,.35)' }}>
+            {prep === 'uploading' ? (
+              <>
+                <div style={{ width: 46, height: 46, margin: '0 auto 18px', border: '4px solid #F0D9C4', borderTopColor: C.accent, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                <h2 style={{ fontWeight: 900, fontSize: '1.3rem', margin: '0 0 8px' }}>שומרים את התמונות שלכם…</h2>
+                <p style={{ color: C.body, fontSize: '.98rem', lineHeight: 1.7, margin: '0 0 18px' }}>
+                  {uploadedCount} מתוך {photos.length} — נמשיך לתשלום ברגע שכולן יישמרו. נא לא לסגור את החלון.
+                </p>
+                <div style={{ height: 10, background: C.cream, borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.round((uploadedCount / Math.max(photos.length, 1)) * 100)}%`, background: C.accent, transition: 'width .3s ease' }} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 44, marginBottom: 12 }}>😕</div>
+                <h2 style={{ fontWeight: 900, fontSize: '1.3rem', margin: '0 0 8px' }}>שמירת התמונות נקטעה</h2>
+                <p style={{ color: C.body, fontSize: '.98rem', lineHeight: 1.7, margin: '0 0 20px' }}>
+                  לא הצלחנו לשמור את כל התמונות, ולכן עוד לא עברנו לתשלום. אפשר לנסות שוב — תמונות שנשמרו לא יועלו פעמיים.
+                </p>
+                {uploadErr && (
+                  <div style={{ background: C.errorBg, color: C.accentDark, fontSize: '.8rem', direction: 'ltr', textAlign: 'left', borderRadius: 12, padding: '10px 14px', margin: '0 0 16px', wordBreak: 'break-word' }}>{uploadErr}</div>
+                )}
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button onClick={retryUpload} style={{ ...pillBtn, padding: '12px 28px' }}>נסו שוב</button>
+                  {(config.socialLinks?.whatsapp || '').trim() && (
+                    <a href={`${(config.socialLinks.whatsapp || '').trim()}${(config.socialLinks.whatsapp || '').includes('?') ? '&' : '?'}text=${encodeURIComponent(`שלום, ניסיתי להזמין סרטון והעלאת התמונות נקטעה.\nמספר הזמנה: ${getOrderId()}\nשם: ${form.name.trim()}`)}`}
+                      target="_blank" rel="noopener noreferrer" data-track="וואטסאפ - העלאה נקטעה"
+                      style={{ ...pillBtn, padding: '12px 28px', background: '#25D366', boxShadow: '0 8px 22px rgba(37,211,102,.35)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 17 }}>💬</span>עזרו לי בוואטסאפ
+                    </a>
+                  )}
+                  <button onClick={() => setPrep(null)} style={{ border: `1.5px solid ${C.borderStrong}`, background: '#fff', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 15, color: C.body, padding: '12px 24px', borderRadius: 999 }}>חזרה</button>
+                </div>
+                <p style={{ color: C.muted, fontSize: '.85rem', lineHeight: 1.7, margin: '14px 0 0' }}>
+                  הפרטים שלכם כבר נשמרו אצלנו — נשמח לעזור ולהשלים את ההזמנה יחד.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

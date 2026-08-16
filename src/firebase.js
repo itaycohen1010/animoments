@@ -430,7 +430,6 @@ export async function markConverted(orderId) {
   if (!ready()) return;
   try {
     await setDoc(sessionRef(), { converted: true, orderId: orderId || '', convertedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
-    setDoc(doc(collection(db, 'leads'), sessionId()), { converted: true, orderId: orderId || '' }, { merge: true }).catch(() => {});
   } catch (e) { /* silent */ }
 }
 

@@ -1,17 +1,25 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { config, colors as C } from '../config.js';
 import { pillBtn } from '../styles.js';
+import { fetchSettings } from '../firebase.js';
 
 // Standalone photo upload page (reupload.html) — the simplest thing that works.
 // No order id, no payment, no database: photos go into a fresh Cloudinary folder
 // named by the customer's name + timestamp, which we link to the order manually.
 export default function ReuploadApp() {
+  // The page is CLOSED by default and only opens when we flip `reuploadOpen`
+  // in the admin (settings/site), so nobody can upload without us asking.
+  const [gate, setGate] = useState('checking'); // checking | open | closed
+  useEffect(() => {
+    fetchSettings()
+      .then((s) => setGate(s && s.reuploadOpen ? 'open' : 'closed'))
+      .catch(() => setGate('closed'));
+  }, []);
   const [photos, setPhotos] = useState([]);
   const [dragIndex, setDragIndex] = useState(null);
   const [dzOver, setDzOver] = useState(false);
   const [state, setState] = useState('form'); // form | uploading | done | failed
   const [done, setDone] = useState(0);
-  const [folderName, setFolderName] = useState('');
   const [errDetail, setErrDetail] = useState('');
   const fileRef = useRef(null);
   const folderRef = useRef(null);
@@ -44,7 +52,6 @@ export default function ReuploadApp() {
       folderRef.current = `video-orders/NEW_${stamp}`;
     }
     const folder = folderRef.current;
-    setFolderName(folder.split('/')[1]);
     const base = `https://api.cloudinary.com/v1_1/${encodeURIComponent(cloud)}`;
 
     try {
@@ -58,8 +65,11 @@ export default function ReuploadApp() {
             fd.append('file', p.file);
             fd.append('upload_preset', preset);
             fd.append('folder', folder);
+            fd.append('asset_folder', folder); // dynamic-folder mode
             fd.append('tags', folder.split('/')[1]);
-            fd.append('public_id', String(i + 1)); // filename = position in the video
+            fd.append('public_id', String(i + 1).padStart(3, '0'));
+            fd.append('display_name', String(i + 1).padStart(3, '0'));
+            // zero-padded so Cloudinary's A–Z sort matches the real order
             fd.append('context', `order=${i + 1}`);
             res = await fetch(`${base}/image/upload`, { method: 'POST', body: fd });
             if (res.ok) break;
@@ -82,6 +92,24 @@ export default function ReuploadApp() {
   };
 
   const card = { background: '#fff', border: `1px solid ${C.border}`, borderRadius: 20, padding: '22px', marginBottom: 18 };
+
+  if (gate === 'checking') {
+    return <Shell><div style={{ ...card, textAlign: 'center', padding: '46px 24px', color: C.body }}>טוען…</div></Shell>;
+  }
+  if (gate === 'closed') {
+    return (
+      <Shell>
+        <div style={{ ...card, textAlign: 'center', padding: '46px 24px' }}>
+          <div style={{ fontSize: 46, marginBottom: 12 }}>🔒</div>
+          <h1 style={{ fontWeight: 900, fontSize: 'clamp(1.3rem, 5vw, 1.7rem)', margin: '0 0 10px' }}>הדף סגור כרגע</h1>
+          <p style={{ color: C.body, fontSize: '1rem', lineHeight: 1.8, margin: '0 0 18px' }}>
+            דף העלאת התמונות נפתח רק לפי תיאום איתנו. אם ביקשנו מכם להעלות תמונות מחדש, צרו איתנו קשר ונפתח אותו עבורכם.
+          </p>
+          {wa && <a href={wa} target="_blank" rel="noopener noreferrer" style={{ ...pillBtn, background: '#25D366', textDecoration: 'none', display: 'inline-block' }}>כתבו לנו בוואטסאפ</a>}
+        </div>
+      </Shell>
+    );
+  }
 
   if (state === 'done') {
     return (
