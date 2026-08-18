@@ -258,8 +258,7 @@ export default function App() {
     const err = validateDetails();
     if (err) { setFormError(err); return; }
     trackLead({ name: form.name, phone: form.phone, email: form.email });
-    saveLead({ orderId: getOrderId(), name: form.name, phone: form.phone, email: form.email, packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price, photoCount: photos.length });
-    savePendingOrder();
+    saveLead({ orderId: getOrderId(), name: form.name, phone: form.phone, email: form.email, packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price, photoCount: photos.length, mood, folder: orderFolder() });
     setUploadedCount(0);
     setPrep('uploading');
     uploadPromiseRef.current = uploadPhotos();
@@ -309,15 +308,8 @@ export default function App() {
     const stamp = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
     return uploadFolderRef.current || `video-orders/${getOrderId()}_${name}-${stamp}${mood ? '_' + mood.replace(/\s+/g, '-') : ''}`;
   };
-  // Save the order the MOMENT payment starts, as "pending" — so the buyer's details
-  // are never lost even if the Grow return signal fails to come back.
-  const savePendingOrder = () => {
-    saveOrder({
-      orderId: getOrderId(), name: form.name.trim(), phone: form.phone.trim(), email: form.email.trim(),
-      packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price,
-      photoCount: photos.length, mood, blessing: (form.blessing || ''), folder: orderFolder(), status: 'pending'
-    });
-  };
+  // A record is written to `orders` ONLY once payment is confirmed. Before that the
+  // customer exists as a LEAD (with their photo folder), never as a pending order.
   const saveOrderOnce = () => {
     if (orderSavedRef.current) return;
     orderSavedRef.current = true;
@@ -548,7 +540,7 @@ export default function App() {
       {step === 3 && (
         <PaymentScreen pkg={pkg} photoCount={photos.length} form={form} reportPaidPrice={(v) => { paidPriceRef.current = v; }}
           card={card} setCard={setCard} payError={payError} setPayError={setPayError}
-          onPaymentStart={savePendingOrder}
+          onPaymentStart={() => {}}
           onConfirm={confirmPayment} onBack={() => { setStep(2); setPayError(null); }} />
       )}
 

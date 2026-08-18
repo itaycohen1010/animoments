@@ -289,6 +289,10 @@ export async function saveLead(lead) {
       packageId: lead.packageKey || '',
       price: lead.price ?? null,
       photoCount: lead.photoCount ?? null,
+      folder: lead.folder || '',
+      mood: lead.mood || '',
+      device: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+      referrer: (document.referrer || '').slice(0, 300),
       converted: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -413,16 +417,9 @@ export async function trackLead(info) {
       email: (info.email || '').slice(0, 120),
       updatedAt: serverTimestamp()
     }, { merge: true });
-    // Also persist as a standalone lead so it survives session pruning.
-    await setDoc(doc(collection(db, 'leads'), sessionId()), {
-      name: (info.name || '').slice(0, 80),
-      phone: (info.phone || '').slice(0, 40),
-      email: (info.email || '').slice(0, 120),
-      device: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-      referrer: (document.referrer || '').slice(0, 300),
-      converted: false,
-      createdAt: serverTimestamp()
-    }, { merge: true });
+    // NOTE: the standalone lead document is written by saveLead(), keyed by orderId.
+    // Writing another one here (keyed by sessionId) produced a duplicate row per
+    // customer in the admin — one with an order id, one without.
   } catch (e) { /* silent */ }
 }
 
