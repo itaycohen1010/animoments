@@ -59,13 +59,56 @@ export default function ReuploadApp() {
     setDzOver(false);
     const imgs = Array.from(list || []).filter((f) => f.type.startsWith('image/'));
     if (!imgs.length) return;
-    setPhotos((prev) => [...prev, ...imgs.map((f) => ({ id: Math.random().toString(36).slice(2), file: f, url: URL.createObjectURL(f) }))]);
+    // same behaviour as the site: accept up to a hard cap of 40; anything past the
+    // per-password limit is marked and blocks continuing until removed.
+    const HARD_CAP = 40;
+    const room = HARD_CAP - photos.length;
+    if (room <= 0) return;
+    setPhotos((prev) => [...prev, ...imgs.slice(0, room).map((f) => ({ id: Math.random().toString(36).slice(2), file: f, url: URL.createObjectURL(f) }))]);
   };
   const reorder = (from, to) => {
     if (from == null || to == null || from === to) return;
     setPhotos((prev) => { const n = [...prev]; const [m] = n.splice(from, 1); n.splice(to, 0, m); return n; });
     setDragIndex(to);
   };
+
+  // touch drag (press-and-hold ~180ms) — same as the site's upload screen
+  const touchDrag = useRef({ dragging: false, timer: null, start: null, index: null });
+  useEffect(() => {
+    const td = touchDrag.current;
+    const onMove = (e) => {
+      const t = e.touches && e.touches[0];
+      if (!t) return;
+      if (!td.dragging) {
+        if (td.start && (Math.abs(t.clientX - td.start.x) > 10 || Math.abs(t.clientY - td.start.y) > 10)) {
+          clearTimeout(td.timer); td.start = null;
+        }
+        return;
+      }
+      e.preventDefault();
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      const cardEl = el && el.closest && el.closest('[data-photo-idx]');
+      if (cardEl) {
+        const to = parseInt(cardEl.getAttribute('data-photo-idx'), 10);
+        if (!isNaN(to) && to !== td.index) { reorder(td.index, to); td.index = to; }
+      }
+    };
+    const onEnd = () => {
+      clearTimeout(td.timer); td.start = null;
+      if (td.dragging) { td.dragging = false; setDragIndex(null); }
+    };
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('touchcancel', onEnd);
+    return () => {
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      document.removeEventListener('touchcancel', onEnd);
+    };
+  }, []); // eslint-disable-line
+
+  // free the object URLs when leaving the page (40 full-size photos is real memory)
+  useEffect(() => () => photos.forEach((p) => { try { URL.revokeObjectURL(p.url); } catch (e) {} }), []); // eslint-disable-line
 
   const upload = async () => {
     if (!photos.length || overLimit) return;
@@ -253,16 +296,26 @@ export default function ReuploadApp() {
       {photos.length > 0 && (
         <>
           <p style={{ color: C.muted, fontSize: '.92rem', lineHeight: 1.7, margin: '0 0 12px' }}>
-            גררו תמונה כדי לשנות את מיקומה — המספר מציין את מקומה בסרטון.
+            גררו תמונה כדי לשנות את מיקומה — המספר מציין את מקומה בסרטון. בנייד — לחיצה ארוכה וגרירה.
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 12, marginBottom: 24 }}>
             {photos.map((p, i) => (
-              <div key={p.id} draggable
-                onDragStart={() => setDragIndex(i)}
-                onDragEnter={() => reorder(dragIndex, i)}
-                onDragOver={(e) => e.preventDefault()}
-                onDragEnd={() => setDragIndex(null)}
-                style={{ position: 'relative', aspectRatio: '1', borderRadius: 16, overflow: 'hidden', cursor: 'grab',
+              <div key={p.id} draggable data-photo-idx={i}
+              onDragStart={(e) => { setDragIndex(i); e.dataTransfer.effectAllowed = 'move'; }}
+              onDragEnter={() => reorder(dragIndex, i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDragEnd={() => setDragIndex(null)}
+              onTouchStart={(e) => {
+                const t = e.touches[0];
+                const td = touchDrag.current;
+                td.start = { x: t.clientX, y: t.clientY };
+                clearTimeout(td.timer);
+                td.timer = setTimeout(() => {
+                  td.dragging = true; td.index = i; setDragIndex(i);
+                  if (navigator.vibrate) navigator.vibrate(20);
+                }, 180);
+              }}
+                style={{ position: 'relative', aspectRatio: '1', borderRadius: 16, overflow: 'hidden', cursor: 'grab', touchAction: 'manipulation',
                   boxShadow: dragIndex === i ? '0 12px 30px rgba(196,80,46,.4)' : '0 6px 16px rgba(59,42,32,.12)',
                   outline: dragIndex === i ? `3px solid ${C.accent}` : (maxPhotos && i >= maxPhotos ? `2px solid ${C.accent}` : 'none'),
                   opacity: maxPhotos && i >= maxPhotos ? .55 : 1 }}>
