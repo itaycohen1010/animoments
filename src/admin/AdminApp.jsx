@@ -168,6 +168,7 @@ function SettingsEditor() {
   const [data, setData] = useState(null);
   const [pwDraft, setPwDraft] = useState('');
   const [pwLabel, setPwLabel] = useState('');
+  const [pwMax, setPwMax] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -245,22 +246,26 @@ function SettingsEditor() {
             {(data.reuploadPasswordHashes || []).map((p, i) => (
               <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
                 <span style={{ fontSize: 13, color: '#4E7A4E' }}>🔒</span>
-                <input style={{ ...inp, maxWidth: 200 }} value={p.label || ''} placeholder="למי הסיסמה? (לזיהוי בלבד)"
+                <input style={{ ...inp, maxWidth: 170 }} value={p.label || ''} placeholder="למי הסיסמה? (לזיהוי בלבד)"
                   onChange={(e) => { const l = [...data.reuploadPasswordHashes]; l[i] = { ...l[i], label: e.target.value }; set('reuploadPasswordHashes', l); }} />
+                <input type="number" min="0" style={{ ...inp, maxWidth: 90 }} value={p.max ?? ''} placeholder="ללא הגבלה"
+                  title="מקסימום תמונות (ריק = ללא הגבלה)"
+                  onChange={(e) => { const l = [...data.reuploadPasswordHashes]; l[i] = { ...l[i], max: e.target.value === '' ? '' : Number(e.target.value) }; set('reuploadPasswordHashes', l); }} />
                 <button onClick={() => set('reuploadPasswordHashes', data.reuploadPasswordHashes.filter((_, k) => k !== i))}
                   style={{ border: 'none', background: 'transparent', color: ACCENT, cursor: 'pointer', fontSize: 18, fontWeight: 800 }}>×</button>
               </div>
             ))}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
-              <input style={{ ...inp, maxWidth: 150 }} value={pwDraft} onChange={(e) => setPwDraft(e.target.value)} placeholder="סיסמה חדשה" />
-              <input style={{ ...inp, maxWidth: 150 }} value={pwLabel} onChange={(e) => setPwLabel(e.target.value)} placeholder="שם הלקוח" />
+              <input style={{ ...inp, maxWidth: 130 }} value={pwDraft} onChange={(e) => setPwDraft(e.target.value)} placeholder="סיסמה חדשה" />
+              <input style={{ ...inp, maxWidth: 130 }} value={pwLabel} onChange={(e) => setPwLabel(e.target.value)} placeholder="שם הלקוח" />
+              <input type="number" min="0" style={{ ...inp, maxWidth: 90 }} value={pwMax} onChange={(e) => setPwMax(e.target.value)} placeholder="מקס' תמונות" />
               <button disabled={!pwDraft.trim()} onClick={async () => {
                 const v = pwDraft.trim(); if (!v) return;
-                set('reuploadPasswordHashes', [...(data.reuploadPasswordHashes || []), { hash: await sha256Hex(v), label: pwLabel.trim() }]);
-                setPwDraft(''); setPwLabel('');
+                set('reuploadPasswordHashes', [...(data.reuploadPasswordHashes || []), { hash: await sha256Hex(v), label: pwLabel.trim(), max: pwMax === '' ? '' : Number(pwMax) }]);
+                setPwDraft(''); setPwLabel(''); setPwMax('');
               }} style={{ border: 'none', background: pwDraft.trim() ? ACCENT : '#D9C4B2', color: '#fff', cursor: pwDraft.trim() ? 'pointer' : 'not-allowed', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 13, padding: '9px 18px', borderRadius: 999 }}>הוספה</button>
             </div>
-            <div style={{ fontSize: 12, color: BODY, marginTop: 6 }}>כל אחת מהסיסמאות פותחת את הדף. הן נשמרות מוצפנות — אפשר למחוק, לא לראות.</div>
+            <div style={{ fontSize: 12, color: BODY, marginTop: 6 }}>כל אחת מהסיסמאות פותחת את הדף. הן נשמרות מוצפנות — אפשר למחוק, לא לראות. שדה המספר מגביל כמה תמונות אפשר להעלות עם אותה סיסמה.</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
             <a href="/reupload.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>פתיחת הדף ↗</a>

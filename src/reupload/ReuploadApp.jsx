@@ -11,7 +11,8 @@ export default function ReuploadApp() {
   // in the admin (settings/site). When a password is set there too, the customer
   // must enter it before the upload form appears.
   const [gate, setGate] = useState('checking'); // checking | locked | open | closed
-  const [hashes, setHashes] = useState([]); // [{hash,label}] — any one grants access
+  const [hashes, setHashes] = useState([]); // [{hash,label,max}] — any one grants access
+  const [maxPhotos, setMaxPhotos] = useState(0); // 0 = unlimited, from the matched password
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState(false);
   const [tries, setTries] = useState(0);
@@ -24,7 +25,8 @@ export default function ReuploadApp() {
         setHashes(list);
         if (!list.length) { setGate('open'); return; }
         const ok = sessionStorage.getItem('reuploadOk');
-        setGate(list.some((p) => p.hash === ok) ? 'open' : 'locked');
+        const match = list.find((p) => p.hash === ok);
+        if (match) { setMaxPhotos(Number(match.max) || 0); setGate('open'); } else setGate('locked');
       })
       .catch(() => setGate('closed'));
   }, []);
@@ -35,6 +37,7 @@ export default function ReuploadApp() {
     const match = hashes.find((p) => p.hash === h);
     if (match) {
       try { sessionStorage.setItem('reuploadOk', h); } catch (err) { /* ignore */ }
+      setMaxPhotos(Number(match.max) || 0);
       setGate('open'); setPwError(false);
     } else { setPwError(true); setTries((n) => n + 1); }
   };
@@ -50,6 +53,7 @@ export default function ReuploadApp() {
   const folderRef = useRef(null);
   const orderRef = useRef(null);
   const wa = (config.socialLinks?.whatsapp || '').trim();
+  const overLimit = maxPhotos > 0 && photos.length > maxPhotos;
 
   const addFiles = (list) => {
     setDzOver(false);
@@ -64,7 +68,7 @@ export default function ReuploadApp() {
   };
 
   const upload = async () => {
-    if (!photos.length) return;
+    if (!photos.length || overLimit) return;
     setState('uploading'); setDone(0); setErrDetail('');
     const cloud = (config.cloudinary.cloudName || '').trim();
     const preset = (config.cloudinary.uploadPreset || '').trim();
@@ -243,7 +247,7 @@ export default function ReuploadApp() {
         style={{ border: `2.5px dashed ${dzOver ? C.accent : C.borderStrong}`, background: dzOver ? C.soft : '#FFFDFA', borderRadius: 24, padding: '40px 20px', textAlign: 'center', cursor: 'pointer', transition: 'all .15s ease', marginBottom: 16 }}>
         <div style={{ fontSize: 44, marginBottom: 10 }}>📷</div>
         <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 4 }}>גררו לכאן תמונות, או לחצו לבחירה מהמכשיר</div>
-        <div style={{ color: C.muted, fontSize: '.9rem' }}>אפשר לבחור כמה תמונות בבת אחת</div>
+        <div style={{ color: overLimit ? C.accentDark : C.muted, fontSize: '.9rem', fontWeight: overLimit ? 700 : 400 }}>{maxPhotos ? `עד ${maxPhotos} תמונות · נבחרו ${photos.length}` : 'אפשר לבחור כמה תמונות בבת אחת'}</div>
       </div>
 
       {photos.length > 0 && (
@@ -260,23 +264,36 @@ export default function ReuploadApp() {
                 onDragEnd={() => setDragIndex(null)}
                 style={{ position: 'relative', aspectRatio: '1', borderRadius: 16, overflow: 'hidden', cursor: 'grab',
                   boxShadow: dragIndex === i ? '0 12px 30px rgba(196,80,46,.4)' : '0 6px 16px rgba(59,42,32,.12)',
-                  outline: dragIndex === i ? `3px solid ${C.accent}` : 'none' }}>
+                  outline: dragIndex === i ? `3px solid ${C.accent}` : (maxPhotos && i >= maxPhotos ? `2px solid ${C.accent}` : 'none'),
+                  opacity: maxPhotos && i >= maxPhotos ? .55 : 1 }}>
                 <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("${p.url}")`, backgroundSize: 'cover', backgroundPosition: 'center', pointerEvents: 'none' }} />
                 <span style={{ position: 'absolute', top: 6, right: 6, minWidth: 26, height: 26, borderRadius: 999, background: C.accent, color: '#fff', fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' }}>{i + 1}</span>
                 <button onClick={(e) => { e.stopPropagation(); setPhotos((prev) => prev.filter((x) => x.id !== p.id)); }} aria-label="הסרת התמונה"
                   style={{ position: 'absolute', top: 6, left: 6, width: 26, height: 26, borderRadius: '50%', border: 'none', background: 'rgba(59,42,32,.7)', color: '#fff', fontSize: 14, cursor: 'pointer', fontFamily: "'Heebo', sans-serif" }}>×</button>
+                {maxPhotos > 0 && i >= maxPhotos && (
+                  <span style={{ position: 'absolute', bottom: 0, right: 0, left: 0, background: 'rgba(168,62,32,.92)', color: '#fff', fontWeight: 700, fontSize: 11, textAlign: 'center', padding: '3px 4px', direction: 'rtl' }}>⚠ מעבר למכסה</span>
+                )}
               </div>
             ))}
           </div>
         </>
       )}
 
+      {overLimit && (
+        <div style={{ background: C.errorBg, border: `1.5px solid ${C.accent}`, borderRadius: 16, padding: '14px 18px', marginBottom: 16, textAlign: 'center' }}>
+          <div style={{ fontWeight: 800, color: C.accentDark, marginBottom: 4 }}>חרגתם ממכסת התמונות</div>
+          <div style={{ color: C.body, fontSize: '.94rem', lineHeight: 1.7 }}>
+            נבחרו {photos.length} תמונות, והמכסה שלכם היא {maxPhotos}. הסירו {photos.length - maxPhotos} כדי להמשיך.
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 40 }}>
-        <button onClick={upload} disabled={!photos.length}
+        <button onClick={upload} disabled={!photos.length || overLimit}
           style={{ ...pillBtn, padding: '14px 38px',
-            background: photos.length ? pillBtn.background : '#D9C4B2',
-            boxShadow: photos.length ? pillBtn.boxShadow : 'none',
-            cursor: photos.length ? 'pointer' : 'not-allowed' }}>
+            background: (photos.length && !overLimit) ? pillBtn.background : '#D9C4B2',
+            boxShadow: (photos.length && !overLimit) ? pillBtn.boxShadow : 'none',
+            cursor: (photos.length && !overLimit) ? 'pointer' : 'not-allowed' }}>
           שליחת התמונות
         </button>
       </div>
