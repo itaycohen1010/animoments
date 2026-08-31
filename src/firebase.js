@@ -213,6 +213,13 @@ export async function fetchGallery(max = 200) {
   }
 }
 
+// SHA-256 hex digest — used to store the re-upload page password as a hash
+// instead of plain text, so the settings doc never carries a readable password.
+export async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('am_reupload::' + text));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Read business settings from settings/site (packages, announcement, promo, examples…).
 // Returns the doc data object, or null if not configured / not present.
 export async function fetchSettings() {
@@ -510,16 +517,23 @@ export async function listDailyStats(max = 120) {
 }
 
 // Admin: roll up sessions older than `keepDays` into dailyStats docs, then delete them.
-// Runs on admin load; safe to call repeatedly. Returns number of sessions pruned.
+// Idempotent: sessions are FLAGGED `rolled` before being aggregated, and flagged
+// ones are skipped forever after — so an interrupted run (closed tab, failed delete,
+// two admin tabs at once) can never count the same visits into dailyStats twice.
+// That double-counting is what inflated the "all time" number.
+let _rollupRunning = false;
 export async function rollupOldSessions(keepDays = 7) {
-  if (!ready()) return 0;
+  if (!ready() || _rollupRunning) return 0;
+  _rollupRunning = true;
   const cutoff = Date.now() - keepDays * 86400000;
   const toMs = (t) => (t && t.seconds ? t.seconds * 1000 : (t && t.toMillis ? t.toMillis() : 0));
   const dayKey = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   try {
     const snap = await getDocs(query(collection(db, 'sessions'), orderBy('startedAt', 'asc'), limit(500)));
-    const old = snap.docs.filter((d) => { const t = toMs(d.data().startedAt); return t && t < cutoff; });
-    if (!old.length) return 0;
+    const old = snap.docs.filter((d) => { const s = d.data(); const t = toMs(s.startedAt); return t && t < cutoff && !s.rolled; });
+    if (!old.length) { _rollupRunning = false; return 0; }
+    // claim them first — anything flagged is never aggregated again
+    await Promise.all(old.map((d) => setDoc(doc(collection(db, 'sessions'), d.id), { rolled: true }, { merge: true })));
     // group by date
     const byDate = {};
     old.forEach((docSnap) => {
@@ -570,5 +584,6 @@ export async function rollupOldSessions(keepDays = 7) {
     await Promise.all(old.map((d) => deleteDoc(doc(collection(db, 'sessions'), d.id))));
     return old.length;
   } catch (e) { console.warn('rollupOldSessions failed', e); return 0; }
+  finally { _rollupRunning = false; }
 }
 

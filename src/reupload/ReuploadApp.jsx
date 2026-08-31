@@ -1,21 +1,46 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { config, colors as C } from '../config.js';
 import { pillBtn } from '../styles.js';
-import { fetchSettings } from '../firebase.js';
+import { fetchSettings, sha256Hex, saveOrder } from '../firebase.js';
 
 // Standalone photo upload page (reupload.html) — the simplest thing that works.
 // No order id, no payment, no database: photos go into a fresh Cloudinary folder
 // named by the customer's name + timestamp, which we link to the order manually.
 export default function ReuploadApp() {
   // The page is CLOSED by default and only opens when we flip `reuploadOpen`
-  // in the admin (settings/site), so nobody can upload without us asking.
-  const [gate, setGate] = useState('checking'); // checking | open | closed
+  // in the admin (settings/site). When a password is set there too, the customer
+  // must enter it before the upload form appears.
+  const [gate, setGate] = useState('checking'); // checking | locked | open | closed
+  const [hashes, setHashes] = useState([]); // [{hash,label}] — any one grants access
+  const [pwInput, setPwInput] = useState('');
+  const [pwError, setPwError] = useState(false);
+  const [tries, setTries] = useState(0);
   useEffect(() => {
     fetchSettings()
-      .then((s) => setGate(s && s.reuploadOpen ? 'open' : 'closed'))
+      .then(async (s) => {
+        if (!s || !s.reuploadOpen) { setGate('closed'); return; }
+        const list = Array.isArray(s.reuploadPasswordHashes) ? s.reuploadPasswordHashes
+          : (s.reuploadPasswordHash ? [{ hash: s.reuploadPasswordHash, label: '' }] : []); // legacy single
+        setHashes(list);
+        if (!list.length) { setGate('open'); return; }
+        const ok = sessionStorage.getItem('reuploadOk');
+        setGate(list.some((p) => p.hash === ok) ? 'open' : 'locked');
+      })
       .catch(() => setGate('closed'));
   }, []);
+  const submitPw = async (e) => {
+    e.preventDefault();
+    if (tries >= 5) return;
+    const h = await sha256Hex(pwInput.trim());
+    const match = hashes.find((p) => p.hash === h);
+    if (match) {
+      try { sessionStorage.setItem('reuploadOk', h); } catch (err) { /* ignore */ }
+      setGate('open'); setPwError(false);
+    } else { setPwError(true); setTries((n) => n + 1); }
+  };
   const [photos, setPhotos] = useState([]);
+  const [name, setName] = useState('');
+  const [orderId, setOrderId] = useState('');
   const [dragIndex, setDragIndex] = useState(null);
   const [dzOver, setDzOver] = useState(false);
   const [state, setState] = useState('form'); // form | uploading | done | failed
@@ -23,6 +48,7 @@ export default function ReuploadApp() {
   const [errDetail, setErrDetail] = useState('');
   const fileRef = useRef(null);
   const folderRef = useRef(null);
+  const orderRef = useRef(null);
   const wa = (config.socialLinks?.whatsapp || '').trim();
 
   const addFiles = (list) => {
@@ -45,11 +71,17 @@ export default function ReuploadApp() {
     if (!cloud || !preset) { setState('failed'); return; }
 
     if (!folderRef.current) {
+      // real order number, same format as the site — so this upload behaves like an
+      // order: it shows up in the admin and can be collected from הסרטון שלי.
       const d = new Date();
       const pad = (n) => String(n).padStart(2, '0');
-      const stamp = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
-      // same root folder as the main site, so the unsigned preset's rules apply
-      folderRef.current = `video-orders/NEW_${stamp}`;
+      const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+      const id = `AM-${pad(d.getDate())}${pad(d.getMonth() + 1)}${String(d.getFullYear()).slice(2)}-${rnd}`;
+      const who = (name.trim() || 'ללא-שם').replace(/\s+/g, '-');
+      const stamp = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
+      orderRef.current = id;
+      setOrderId(id);
+      folderRef.current = `video-orders/${id}_${who}-${stamp}`;
     }
     const folder = folderRef.current;
     const base = `https://api.cloudinary.com/v1_1/${encodeURIComponent(cloud)}`;
@@ -69,7 +101,7 @@ export default function ReuploadApp() {
             fd.append('tags', folder.split('/')[1]);
             fd.append('public_id', String(i + 1).padStart(3, '0'));
             // zero-padded so Cloudinary's A–Z sort matches the real order
-            fd.append('context', `order=${i + 1}`);
+            fd.append('context', `order=${i + 1}|from=${name.trim()}`);
             res = await fetch(`${base}/image/upload`, { method: 'POST', body: fd });
             if (res.ok) break;
             let msg = '';
@@ -82,6 +114,13 @@ export default function ReuploadApp() {
         p.uploaded = true;
         setDone(i + 1);
       }
+      // register it as a real order so it appears in the admin and can be collected
+      // from הסרטון שלי by its order number
+      saveOrder({
+        orderId: orderRef.current, name: name.trim(), phone: '', email: '',
+        packageKey: 'manual', price: 0, photoCount: photos.length,
+        folder: folderRef.current, status: 'new'
+      });
       setState('done');
     } catch (e) {
       console.warn('upload failed', e);
@@ -94,6 +133,25 @@ export default function ReuploadApp() {
 
   if (gate === 'checking') {
     return <Shell><div style={{ ...card, textAlign: 'center', padding: '46px 24px', color: C.body }}>טוען…</div></Shell>;
+  }
+  if (gate === 'locked') {
+    return (
+      <Shell>
+        <form onSubmit={submitPw} style={{ ...card, textAlign: 'center', padding: '46px 24px' }}>
+          <div style={{ fontSize: 46, marginBottom: 12 }}>🔑</div>
+          <h1 style={{ fontWeight: 900, fontSize: 'clamp(1.3rem, 5vw, 1.7rem)', margin: '0 0 10px' }}>הזינו את הסיסמה</h1>
+          <p style={{ color: C.body, fontSize: '1rem', lineHeight: 1.8, margin: '0 0 20px' }}>
+            הדף מוגן בסיסמה שקיבלתם מאיתנו.
+          </p>
+          <input type="password" value={pwInput} autoFocus
+            onChange={(e) => { setPwInput(e.target.value); setPwError(false); }}
+            placeholder="סיסמה"
+            style={{ width: '100%', maxWidth: 280, boxSizing: 'border-box', fontFamily: "'Heebo', sans-serif", fontSize: 16, textAlign: 'center', padding: '12px 16px', borderRadius: 14, border: `1.5px solid ${pwError ? C.accent : C.borderStrong}`, background: '#FFFDFA', color: C.ink, marginBottom: 14, display: 'block', marginInline: 'auto' }} />
+          {pwError && <div style={{ color: C.accentDark, fontWeight: 700, fontSize: '.9rem', marginBottom: 14 }}>{tries >= 5 ? 'יותר מדי ניסיונות — רעננו את הדף' : 'סיסמה שגויה, נסו שוב'}</div>}
+          <button type="submit" disabled={tries >= 5} style={{ ...pillBtn, padding: '12px 34px', opacity: tries >= 5 ? .5 : 1, cursor: tries >= 5 ? 'not-allowed' : 'pointer' }}>כניסה</button>
+        </form>
+      </Shell>
+    );
   }
   if (gate === 'closed') {
     return (
@@ -116,10 +174,15 @@ export default function ReuploadApp() {
         <div style={{ ...card, textAlign: 'center', padding: '46px 24px' }}>
           <div style={{ fontSize: 52, marginBottom: 10 }}>🎉</div>
           <h1 style={{ fontWeight: 900, fontSize: 'clamp(1.5rem, 5vw, 2rem)', margin: '0 0 12px' }}>התמונות התקבלו ✓</h1>
-          <p style={{ color: C.body, fontSize: '1rem', lineHeight: 1.8, margin: '0 0 6px' }}>
+          <div style={{ background: '#FBE4D7', borderRadius: 16, padding: '16px 18px', margin: '0 auto 18px', maxWidth: 340 }}>
+            <div style={{ color: C.body, fontSize: '.85rem', marginBottom: 4 }}>מספר ההזמנה שלכם</div>
+            <div style={{ fontWeight: 900, fontSize: '1.5rem', color: C.accentDark, direction: 'ltr', letterSpacing: '.5px' }}>{orderId}</div>
+            <div style={{ color: C.body, fontSize: '.82rem', marginTop: 6, lineHeight: 1.6 }}>שמרו אותו — איתו תוכלו לאסוף את הסרטון כשיהיה מוכן.</div>
+          </div>
+          <p style={{ color: C.body, fontSize: '1rem', lineHeight: 1.8, margin: '0 0 16px' }}>
             {photos.length} תמונות נקלטו במערכת. אנחנו ממשיכים בהפקת הסרטון ונעדכן אתכם כשהוא מוכן.
           </p>
-          <p style={{ color: C.muted, fontSize: '.9rem', margin: 0 }}>אין צורך בתשלום נוסף.</p>
+          <a href={`/?lookup=1&order=${encodeURIComponent(orderId)}`} style={{ ...pillBtn, padding: '12px 30px', textDecoration: 'none', display: 'inline-block' }}>מעבר ל״הסרטון שלי״</a>
         </div>
       </Shell>
     );
@@ -164,6 +227,12 @@ export default function ReuploadApp() {
         <div style={{ color: C.body, fontSize: '.95rem', lineHeight: 1.7 }}>
           בחרו את התמונות וסדרו אותן — הסדר כאן הוא הסדר בסרטון. <strong>ללא תשלום נוסף.</strong>
         </div>
+      </div>
+
+      <div style={card}>
+        <label style={{ display: 'block', fontWeight: 700, fontSize: '.95rem', marginBottom: 6 }}>שם</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="השם שלכם"
+          style={{ width: '100%', boxSizing: 'border-box', fontFamily: "'Heebo', sans-serif", fontSize: 16, padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${C.borderStrong}`, background: '#FFFDFA', color: C.ink }} />
       </div>
 
       <input type="file" accept="image/*" multiple ref={fileRef} onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />

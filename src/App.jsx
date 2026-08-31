@@ -131,7 +131,6 @@ export default function App() {
   const fileInputRef = useRef(null);
   const toastTimer = useRef(null);
   const uploadFolderRef = useRef(null);
-  const detailsUploadedRef = useRef(false);
   const orderIdRef = useRef(null);
   const paidPriceRef = useRef(null); // final price after coupon, reported by PaymentScreen
 
@@ -462,7 +461,6 @@ export default function App() {
   const resetAll = () => {
     uploadPromiseRef.current = null;
     uploadFolderRef.current = null;
-    detailsUploadedRef.current = false;
     orderIdRef.current = null;
     emailSentRef.current = false;
     orderSavedRef.current = false;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { config } from '../config.js';
-import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, updateOrderDetails, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, reorderGallery, listSessions, listDailyStats, listLeads, rollupOldSessions, listQuotes, setQuoteSent, uploadToStorage } from '../firebase.js';
+import { adminLogin, adminLogout, onAdminAuth, listOrders, listProducts, saveProduct, setOrderStatus, updateOrderDetails, getSettings, saveSettings, listGallery, saveGalleryItem, deleteGalleryItem, reorderGallery, listSessions, listDailyStats, listLeads, rollupOldSessions, listQuotes, setQuoteSent, uploadToStorage, sha256Hex } from '../firebase.js';
 
 const C = config.colors || {};
 const ACCENT = '#C4502E', INK = '#3B2A20', BODY = '#6E5240', CARD = '#fff', BG = '#FAF0E6', BORDER = '#F0D9C4';
@@ -166,6 +166,8 @@ function OrderRow({ order, product, onSaved }) {
 
 function SettingsEditor() {
   const [data, setData] = useState(null);
+  const [pwDraft, setPwDraft] = useState('');
+  const [pwLabel, setPwLabel] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -237,6 +239,28 @@ function SettingsEditor() {
           </label>
           <div style={{ fontSize: 12.5, color: BODY, lineHeight: 1.7, marginTop: 6 }}>
             כשסגור — הדף חסום ומציג הודעה. פתחו רק כשצריך לשלוח ללקוח קישור להעלאה מחדש, וסגרו אחרי שהתמונות התקבלו.
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <span style={label}>סיסמאות לדף (ריק = ללא סיסמה)</span>
+            {(data.reuploadPasswordHashes || []).map((p, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, color: '#4E7A4E' }}>🔒</span>
+                <input style={{ ...inp, maxWidth: 200 }} value={p.label || ''} placeholder="למי הסיסמה? (לזיהוי בלבד)"
+                  onChange={(e) => { const l = [...data.reuploadPasswordHashes]; l[i] = { ...l[i], label: e.target.value }; set('reuploadPasswordHashes', l); }} />
+                <button onClick={() => set('reuploadPasswordHashes', data.reuploadPasswordHashes.filter((_, k) => k !== i))}
+                  style={{ border: 'none', background: 'transparent', color: ACCENT, cursor: 'pointer', fontSize: 18, fontWeight: 800 }}>×</button>
+              </div>
+            ))}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+              <input style={{ ...inp, maxWidth: 150 }} value={pwDraft} onChange={(e) => setPwDraft(e.target.value)} placeholder="סיסמה חדשה" />
+              <input style={{ ...inp, maxWidth: 150 }} value={pwLabel} onChange={(e) => setPwLabel(e.target.value)} placeholder="שם הלקוח" />
+              <button disabled={!pwDraft.trim()} onClick={async () => {
+                const v = pwDraft.trim(); if (!v) return;
+                set('reuploadPasswordHashes', [...(data.reuploadPasswordHashes || []), { hash: await sha256Hex(v), label: pwLabel.trim() }]);
+                setPwDraft(''); setPwLabel('');
+              }} style={{ border: 'none', background: pwDraft.trim() ? ACCENT : '#D9C4B2', color: '#fff', cursor: pwDraft.trim() ? 'pointer' : 'not-allowed', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 13, padding: '9px 18px', borderRadius: 999 }}>הוספה</button>
+            </div>
+            <div style={{ fontSize: 12, color: BODY, marginTop: 6 }}>כל אחת מהסיסמאות פותחת את הדף. הן נשמרות מוצפנות — אפשר למחוק, לא לראות.</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
             <a href="/reupload.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>פתיחת הדף ↗</a>
@@ -562,6 +586,8 @@ function MonitoringPanel() {
   const [dailyDocs, setDailyDocs] = useState([]);
   const [leadDocs, setLeadDocs] = useState([]);
   const [days, setDays] = useState('today');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [tab, setTab] = useState('funnel'); // funnel | leads
   const [clickCatSel, setClickCatSel] = useState('הכול');
 
@@ -584,9 +610,18 @@ function MonitoringPanel() {
   useEffect(() => { load(); }, []);
 
   const stepLabels = ['כניסה לאתר', 'בחירת תמונות', 'מילוי פרטים', 'תשלום', 'סיום ✓'];
-  const cutoff = days === 'today' ? new Date().setHours(0, 0, 0, 0) : Date.now() - days * 86400000;
+  // custom range is active only when both dates are picked
+  const customOn = days === 'custom' && customFrom && customTo;
+  const customStart = customOn ? new Date(customFrom + 'T00:00:00').getTime() : 0;
+  const customEnd = customOn ? new Date(customTo + 'T23:59:59.999').getTime() : 0;
+  const cutoff = customOn ? customStart
+    : days === 'today' ? new Date().setHours(0, 0, 0, 0)
+    : Date.now() - (days === 'custom' ? 3650 : days) * 86400000;
   const toMs = (t) => (t && t.seconds ? t.seconds * 1000 : (t && t.toMillis ? t.toMillis() : 0));
-  const rows = (sessions || []).filter((s) => { const t = toMs(s.startedAt); return !t || t >= cutoff; });
+  const inRange = (t) => !t || (t >= cutoff && (!customOn || t <= customEnd));
+  // `rolled` sessions are already represented inside dailyStats — counting the raw
+  // doc as well would double them.
+  const rows = (sessions || []).filter((s) => !s.rolled && inRange(toMs(s.startedAt)));
 
   // older data comes pre-aggregated from dailyStats docs — fold it in
   const dayTs = (k) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
@@ -618,7 +653,7 @@ function MonitoringPanel() {
 
   // abandoned leads: standalone leads collection is the source of truth (survives pruning);
   // fall back to recent sessions for any not yet mirrored there.
-  const leadCutoff = days === 'today' ? new Date().setHours(0, 0, 0, 0) : cutoff;
+  const leadCutoff = customOn ? customStart : days === 'today' ? new Date().setHours(0, 0, 0, 0) : cutoff;
   const leadMap = {};
   (leadDocs || []).forEach((l) => { const t = toMs(l.createdAt); if (!l.converted && (!t || t >= leadCutoff)) leadMap[l.id] = { id: l.id, name: l.name, phone: l.phone, email: l.email, device: l.device, maxStep: 2, startedAt: l.createdAt }; });
   rows.forEach((s) => { if (s.reachedDetails && !s.converted && !leadMap[s.id]) leadMap[s.id] = s; });
@@ -643,9 +678,11 @@ function MonitoringPanel() {
   const dayKey = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const dayMap = { ...dailyByDate };
   rows.forEach((s) => { const t = toMs(s.startedAt); if (!t) return; const k = dayKey(t); if (!dayMap[k]) dayMap[k] = { v: 0, o: 0 }; dayMap[k].v++; if (s.converted) dayMap[k].o++; });
-  const dailyDays = Math.min(days === 'today' ? 1 : days, 30);
+  const dailyDays = customOn
+    ? Math.min(Math.max(1, Math.round((customEnd - customStart) / 86400000) + 1), 60)
+    : Math.min(days === 'today' ? 1 : days, 30);
   const daily = [];
-  for (let i = dailyDays - 1; i >= 0; i--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i); const k = dayKey(d.getTime()); daily.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, ...(dayMap[k] || { v: 0, o: 0 }) }); }
+  for (let i = dailyDays - 1; i >= 0; i--) { const d = new Date(customOn ? customEnd : Date.now()); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i); const k = dayKey(d.getTime()); daily.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, ...(dayMap[k] || { v: 0, o: 0 }) }); }
   const dailyMax = Math.max(1, ...daily.map((x) => x.v));
 
   // day of week (0=Sun)
@@ -674,6 +711,97 @@ function MonitoringPanel() {
   const onSiteCnt = onSite.length + DA.onSiteCount;
   const avgOnSiteSec = onSiteCnt ? Math.round(onSiteSum / onSiteCnt / 1000) : 0;
   const fmtDur = (sec) => sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} דק׳` : `${sec} שנ׳`;
+
+  // ---- Excel export (styled .xls) of everything shown, for the selected range ----
+  const rangeLabel = customOn ? `${customFrom}_${customTo}`
+    : days === 'today' ? 'היום' : days === 3650 ? 'הכול' : `${days}ימים`;
+  const exportCsv = () => {
+    const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const P = ['#C4502E', '#D9822E', '#E8A13C', '#7A9E7E', '#6E5240', '#A83E20'];
+    const bar = (v, max, color) => {
+      const pct = max ? Math.round((v / max) * 100) : 0;
+      return `<td><div style="background:${color};width:${Math.max(pct, 2)}%;color:#fff;font-size:9pt;padding:1px 4px;">${pct}%</div></td>`;
+    };
+    const H = [];
+    H.push(`<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8">
+      <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+      <x:Name>נתונים</x:Name><x:WorksheetOptions><x:DisplayRightToLeft/></x:WorksheetOptions>
+      </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+      <style>
+        td,th{font-family:Arial,sans-serif;font-size:11pt;border:0.5pt solid #E4D3C2;padding:5px 9px;}
+        th{background:${ACCENT};color:#fff;font-weight:bold;}
+        .t{font-size:15pt;font-weight:bold;color:${INK};border:none;padding:14px 0 4px;}
+        .big{font-size:20pt;font-weight:bold;color:${ACCENT};text-align:center;}
+        .lbl{color:#6E5240;font-size:10pt;text-align:center;}
+        .z{border:none;}
+      </style></head><body dir="rtl"><table cellspacing="0">`);
+
+    const title = (t) => H.push(`<tr><td class="t" colspan="8">${esc(t)}</td></tr>`);
+    const head = (cols) => H.push('<tr>' + cols.map((c) => `<th>${esc(c)}</th>`).join('') + '</tr>');
+    const row = (cells) => H.push('<tr>' + cells.map((c) => `<td>${esc(c)}</td>`).join('') + '</tr>');
+    const gap = () => H.push('<tr><td class="z" colspan="8">&nbsp;</td></tr>');
+    const dt = (t) => { const ms = toMs(t); return ms ? new Date(ms).toLocaleString('he-IL') : ''; };
+
+    H.push(`<tr><td class="t" colspan="8">דוח נתונים — ${esc(customOn ? `${customFrom} עד ${customTo}` : rangeLabel)}</td></tr>`);
+    gap();
+
+    const kpis = [['כניסות', total], ['הזמנות', converted], ['אחוז המרה', convRate + '%'],
+      ['זמן שהייה', fmtDur(avgOnSiteSec)], ['גלילה ממוצעת', avgScroll + '%'], ['צפו בגלריה', galleryVisits]];
+    H.push('<tr>' + kpis.map((k) => `<td class="big">${esc(k[1])}</td>`).join('') + '</tr>');
+    H.push('<tr>' + kpis.map((k) => `<td class="lbl">${esc(k[0])}</td>`).join('') + '</tr>');
+    gap();
+
+    title('משפך ההזמנה');
+    head(['שלב', 'מגיעים', 'שיעור']);
+    [['כניסה לאתר', total], ['בחירת תמונות', reached(1)], ['מילוי פרטים', reached(2)], ['תשלום', reached(3)], ['הושלם', converted]]
+      .forEach(([n, v], i) => H.push(`<tr><td>${esc(n)}</td><td>${v}</td>${bar(v, total, P[i % P.length])}</tr>`));
+    gap();
+
+    title('לידים שלא הושלמו');
+    head(['שם', 'טלפון', 'אימייל', 'מכשיר', 'מקור', 'תאריך']);
+    if (!leads.length) row(['אין לידים בטווח']);
+    leads.forEach((l) => row([l.name, l.phone, l.email, l.device === 'mobile' ? 'מובייל' : 'דסקטופ', l.referrer || 'ישיר', dt(l.createdAt || l.startedAt)]));
+    gap();
+
+    title('כניסות לפי יום');
+    head(['תאריך', 'כניסות', 'הזמנות', '']);
+    daily.forEach((d) => H.push(`<tr><td>${esc(d.label)}</td><td>${d.v}</td><td>${d.o}</td>${bar(d.v, dailyMax, P[0])}</tr>`));
+    gap();
+
+    title('כניסות לפי שעה');
+    head(['שעה', 'כניסות', '']);
+    byHour.forEach((v, h) => H.push(`<tr><td>${h}:00</td><td>${v}</td>${bar(v, hourMax, P[1])}</tr>`));
+    gap();
+
+    title('כניסות לפי יום בשבוע');
+    head(['יום', 'כניסות', '']);
+    byDow.forEach((v, i) => H.push(`<tr><td>${esc(dowNames[i])}</td><td>${v}</td>${bar(v, dowMax, P[3])}</tr>`));
+    gap();
+
+    title('מקורות תנועה');
+    head(['מקור', 'כניסות', '']);
+    const srcMax = Math.max(1, ...sources.map((s) => s[1]));
+    sources.forEach(([n, v], i) => H.push(`<tr><td>${esc(n)}</td><td>${v}</td>${bar(v, srcMax, P[i % P.length])}</tr>`));
+    gap();
+
+    title('סוג מכשיר');
+    head(['מכשיר', 'כניסות', '']);
+    [['מובייל', mobileCount], ['דסקטופ', desktopCount]].forEach(([n, v], i) =>
+      H.push(`<tr><td>${esc(n)}</td><td>${v}</td>${bar(v, Math.max(1, total), P[i])}</tr>`));
+    gap();
+
+    title('קליקים באתר');
+    head(['אלמנט', 'קטגוריה', 'קליקים', '']);
+    clickRows.forEach(([n, v], i) => H.push(`<tr><td>${esc(n)}</td><td>${esc(clickCat(n))}</td><td>${v}</td>${bar(v, clickMax, P[i % P.length])}</tr>`));
+
+    H.push('</table></body></html>');
+    const blob = new Blob(['\uFEFF' + H.join('')], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `דוח_${rangeLabel}.xls`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
   // gallery visits
   const galleryVisits = rows.filter((s) => s.viewedGallery).length + DA.galleryViews;
   // avg scroll depth on the landing
@@ -754,13 +882,28 @@ function MonitoringPanel() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <select value={days} onChange={(e) => setDays(e.target.value === 'today' ? 'today' : Number(e.target.value))} style={{ fontFamily: "'Heebo', sans-serif", fontSize: 14, padding: '8px 12px', borderRadius: 10, border: `1px solid ${BORDER}` }}>
+        <select value={days} onChange={(e) => { const v = e.target.value; setDays(v === 'today' || v === 'custom' ? v : Number(v)); }} style={{ fontFamily: "'Heebo', sans-serif", fontSize: 14, padding: '8px 12px', borderRadius: 10, border: `1px solid ${BORDER}` }}>
           <option value="today">היום</option>
           <option value={1}>24 שעות</option>
           <option value={7}>7 ימים</option>
           <option value={30}>30 יום</option>
           <option value={3650}>הכול</option>
+          <option value="custom">טווח תאריכים…</option>
         </select>
+        {days === 'custom' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <input type="date" value={customFrom} max={customTo || undefined} onChange={(e) => setCustomFrom(e.target.value)}
+              style={{ fontFamily: "'Heebo', sans-serif", fontSize: 14, padding: '7px 10px', borderRadius: 10, border: `1.5px solid ${BORDER}`, background: '#fff', color: INK }} />
+            <span style={{ color: BODY, fontSize: 13 }}>עד</span>
+            <input type="date" value={customTo} min={customFrom || undefined} onChange={(e) => setCustomTo(e.target.value)}
+              style={{ fontFamily: "'Heebo', sans-serif", fontSize: 14, padding: '7px 10px', borderRadius: 10, border: `1.5px solid ${BORDER}`, background: '#fff', color: INK }} />
+            {customOn && <span style={{ color: BODY, fontSize: 12.5 }}>{dailyDays} ימים</span>}
+          </div>
+        )}
+        <button onClick={exportCsv} title="יצוא כל הנתונים בטווח שנבחר"
+          style={{ marginRight: 'auto', border: `1.5px solid ${ACCENT}`, background: 'transparent', color: ACCENT, cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 800, fontSize: 13.5, padding: '8px 16px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          ⬇ יצוא לאקסל
+        </button>
         <button onClick={load} style={{ border: `1.5px solid ${ACCENT}`, background: '#fff', cursor: 'pointer', fontFamily: "'Heebo', sans-serif", fontWeight: 700, fontSize: 14, color: ACCENT, padding: '8px 16px', borderRadius: 999 }}>רענון</button>
       </div>
 
