@@ -5,6 +5,7 @@ import { saveOrder, getCustomerId, fetchSettings, startSession, trackStep, track
 
 import Nav from './components/Nav.jsx';
 import { initClarity, clarityTag, clarityEvent } from './clarity.js';
+import { initPixel, pixelTrack, pixelIdentify } from './pixel.js';
 import Footer from './components/Footer.jsx';
 
 import LandingScreen from './screens/LandingScreen.jsx';
@@ -77,7 +78,7 @@ export default function App() {
   }, []); // eslint-disable-line
 
   // analytics: start a session on first load, and record every step change for the funnel
-  useEffect(() => { initClarity(); startSession(); }, []);
+  useEffect(() => { initClarity(); initPixel(); startSession(); }, []);
   useEffect(() => {
     trackStep(step);
     const names = ['landing', 'upload', 'details', 'payment', 'result'];
@@ -248,6 +249,7 @@ export default function App() {
   // ---------- navigation ----------
   const startOrder = (key) => {
     if (key) setPkgKey(key);
+    pixelTrack('ViewContent', { content_name: key || pkgKey, content_type: 'package' });
     setStep(1); // photos first — tips no longer auto-open
   };
 
@@ -259,6 +261,9 @@ export default function App() {
     trackLead({ name: form.name, phone: form.phone, email: form.email });
     saveLead({ orderId: getOrderId(), name: form.name, phone: form.phone, email: form.email, packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price, photoCount: photos.length, mood, folder: orderFolder() });
     setUploadedCount(0);
+    pixelIdentify({ name: form.name, phone: form.phone, email: form.email });
+    pixelTrack('Lead', { content_name: pkg.key });
+    pixelTrack('InitiateCheckout', { value: paidPriceRef.current ?? pkg.price, currency: 'ILS', num_items: photos.length });
     setPrep('uploading');
     uploadPromiseRef.current = uploadPhotos();
     const ok = await uploadPromiseRef.current;
@@ -315,7 +320,8 @@ export default function App() {
     saveOrder({
       orderId: getOrderId(), name: form.name.trim(), phone: form.phone.trim(), email: form.email.trim(),
       packageKey: pkg.key, price: paidPriceRef.current ?? pkg.price,
-      photoCount: photos.length, mood, blessing: (form.blessing || ''), folder: orderFolder(), status: 'paid'
+      photoCount: photos.length, mood, blessing: (form.blessing || ''),
+      folder: orderFolder(), status: 'paid'
     });
   };
 
@@ -404,6 +410,7 @@ export default function App() {
     markConverted(orderIdRef.current);
     markLeadConverted(getOrderId());
     clarityEvent('purchase');
+    pixelTrack('Purchase', { value: paidPriceRef.current ?? pkg.price, currency: 'ILS', content_name: pkg.key });
     setStep(4);
     setUploadedCount(photos.length);
     setResult('done');

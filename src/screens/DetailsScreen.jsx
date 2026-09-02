@@ -51,6 +51,7 @@ export default function DetailsScreen({ pkg, form, setForm, formError, setFormEr
             style={{ width: '100%', boxSizing: 'border-box', direction: 'rtl', resize: 'none', border: `1.5px solid ${C.borderStrong}`, background: '#FFFDFA', borderRadius: 14, padding: '13px 16px', fontSize: 16, color: C.ink, outline: 'none', fontFamily: "'Heebo', sans-serif", lineHeight: 1.7 }} />
           <div style={{ textAlign: 'left', fontSize: '.8rem', fontWeight: 700, color: (form.blessing || '').length >= BLESSING_MAX ? C.accentDark : C.muted, marginTop: 4 }}>{(form.blessing || '').length}/{BLESSING_MAX}</div>
         </div>
+
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 16, cursor: 'pointer', padding: agreeInvalid ? '10px 12px' : 0, background: agreeInvalid ? '#FBE4D7' : 'transparent', borderRadius: 12 }}>
           <input type="checkbox" checked={!!form.agree} onChange={(e) => { setForm({ ...form, agree: e.target.checked }); setFormError(null); }} style={{ width: 20, height: 20, marginTop: 1, accentColor: C.accent, flexShrink: 0, cursor: 'pointer' }} />
           <span style={{ fontSize: '.92rem', color: C.body, lineHeight: 1.6 }}>אני מאשר/ת את <a onClick={(e) => { e.preventDefault(); onOpenLegal && onOpenLegal('terms'); }} href="#" style={{ color: C.accent, fontWeight: 700 }}>תנאי השימוש</a> ו<a onClick={(e) => { e.preventDefault(); onOpenLegal && onOpenLegal('privacy'); }} href="#" style={{ color: C.accent, fontWeight: 700 }}>מדיניות הפרטיות</a> של אתר זה</span>

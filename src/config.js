@@ -148,6 +148,12 @@ export const config = {
     id: 'xwymtivib3', // e.g. 'abcd1234ef' — from clarity.microsoft.com project settings
   },
 
+  // Meta (Facebook) Pixel — ad attribution & retargeting. Paste your Pixel ID to
+  // enable; leave empty to disable entirely (the site then makes zero Meta calls).
+  metaPixel: {
+    id: '1474206891139250', // e.g. '1234567890123456' — Events Manager → Data Sources → your pixel
+  },
+
   // Social links (footer). Empty string hides that icon.
   socialLinks: {
     facebook: 'https://www.facebook.com/share/1EnD91arte/?mibextid=wwXIfr',
